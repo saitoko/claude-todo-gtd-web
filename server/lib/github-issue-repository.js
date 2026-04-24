@@ -138,6 +138,45 @@ class GitHubIssueRepository {
   }
 
   /**
+   * タスクの詳細情報（担当者・コメントを含む）を取得する
+   *
+   * @param {{ owner, repo, token }} tenant
+   * @param {number} issueNumber
+   * @returns {Promise<TaskDetail>}
+   */
+  async getDetail(tenant, issueNumber) {
+    // Issue 基本情報（担当者・日時を含む）
+    const issue = await callEngineJson(
+      tenant,
+      ['view-issue-detail', String(issueNumber)]
+    );
+
+    // コメント一覧（失敗してもコメントなしとして続行する）
+    let comments = [];
+    try {
+      comments = await callEngineJson(
+        tenant,
+        ['list-comments', String(issueNumber)]
+      );
+      if (!Array.isArray(comments)) comments = [];
+    } catch (_err) {
+      // コメント取得失敗は握りつぶし、空配列で続行
+      comments = [];
+    }
+
+    return {
+      number: issue.number,
+      title: issue.title,
+      body: issue.body || '',
+      labels: issue.labels.map(l => (typeof l === 'string' ? l : l.name)),
+      assignees: issue.assignees || [],
+      createdAt: issue.createdAt || null,
+      updatedAt: issue.updatedAt || null,
+      comments,
+    };
+  }
+
+  /**
    * タスクの GTD カテゴリを変更する
    *
    * @param {{ owner, repo, token }} tenant

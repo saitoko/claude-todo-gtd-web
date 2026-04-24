@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api, type Task, type TaskListResponse, GTD_DISPLAY, type GtdKey } from '../lib/api';
+import { getRandomTip } from '../lib/gtd-tips';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
 import AddTaskForm from '../components/AddTaskForm';
+import TaskDetailModal from '../components/TaskDetailModal';
 
 interface Props {
   gtd: GtdKey;
@@ -47,6 +49,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
   const [childTasks, setChildTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailNumber, setDetailNumber] = useState<number | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -86,8 +89,13 @@ export default function List({ gtd, onCategoryChange }: Props) {
     await fetchTasks();
   }
 
+  function handleDetail(number: number) {
+    setDetailNumber(number);
+  }
+
   const displayName = GTD_DISPLAY[gtd] ?? gtd;
   const isProjectView = gtd === 'project';
+  const tip = useMemo(() => getRandomTip(gtd), [gtd]);
 
   // ツリーデータ（project カテゴリのみ）
   const projectTree = isProjectView ? buildProjectTree(tasks, childTasks) : [];
@@ -101,6 +109,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
             {tasks.length} 件
           </span>
         )}
+        {tip && <span className="gtd-tip">{tip}</span>}
       </div>
 
       <AddTaskForm currentGtd={gtd} onAdd={handleAdd} />
@@ -136,6 +145,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
                 onDone={handleDone}
                 onMove={handleMove}
                 onRefresh={handleRefresh}
+                onDetail={handleDetail}
               />
             ))}
           </tbody>
@@ -161,10 +171,17 @@ export default function List({ gtd, onCategoryChange }: Props) {
                 task={task}
                 onDone={handleDone}
                 onMove={handleMove}
+                onDetail={handleDetail}
               />
             ))}
           </tbody>
         </table>
+      )}
+      {detailNumber !== null && (
+        <TaskDetailModal
+          taskNumber={detailNumber}
+          onClose={() => setDetailNumber(null)}
+        />
       )}
     </div>
   );

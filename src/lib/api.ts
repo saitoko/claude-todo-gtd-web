@@ -18,6 +18,20 @@ export interface TaskListResponse {
   childTasks?: Task[]; // project カテゴリ表示時のみ含まれる子タスク一覧
 }
 
+export interface TaskComment {
+  id: number;
+  author: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface TaskDetail extends Task {
+  assignees: string[];
+  createdAt: string;
+  updatedAt: string;
+  comments: TaskComment[];
+}
+
 export interface AddTaskInput {
   title: string;
   gtdCategory?: string;
@@ -39,7 +53,7 @@ export const GTD_DISPLAY: Record<GtdKey, string> = {
 };
 
 // move 先として選択可能なカテゴリ（project は除外）
-export const MOVABLE_GTD_KEYS: GtdKey[] = ['inbox', 'next', 'waiting', 'someday', 'routine', 'reference'];
+export const MOVABLE_GTD_KEYS: GtdKey[] = ['next', 'waiting', 'someday', 'routine', 'reference', 'inbox'];
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
@@ -99,6 +113,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetGtd }),
     }),
+
+  /**
+   * タスクの詳細情報を取得する（担当者・コメントを含む）
+   */
+  getTaskDetail: (number: number): Promise<TaskDetail> =>
+    request<TaskDetail>(`/api/tasks/${number}`),
 
   /**
    * ヘルスチェック

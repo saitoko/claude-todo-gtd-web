@@ -10,9 +10,10 @@ interface Props {
   onMove: (number: number, targetGtd: string) => Promise<void>;
   /** 子タスクも含めて完了した後など、APIを再呼び出しせずリスト再フェッチだけしたいとき */
   onRefresh: () => Promise<void>;
+  onDetail: (number: number) => void;
 }
 
-export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh }: Props) {
+export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh, onDetail }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
@@ -123,6 +124,14 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         <td>
           <div className="task-actions">
             <button
+              className="btn"
+              onClick={() => onDetail(parent.number)}
+              disabled={busy}
+              title="詳細を表示"
+            >
+              詳細
+            </button>
+            <button
               className="btn btn-danger"
               onClick={handleDone}
               disabled={busy}
@@ -130,25 +139,27 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
             >
               完了
             </button>
-            <select
-              value={moveTarget}
-              onChange={(e) => setMoveTarget(e.target.value)}
-              disabled={busy}
-            >
-              <option value="">移動先...</option>
-              {MOVABLE_GTD_KEYS
-                .filter((k) => k !== parent.gtdCategory)
-                .map((k) => (
-                  <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
-                ))}
-            </select>
-            <button
-              className="btn"
-              onClick={handleMove}
-              disabled={busy || !moveTarget}
-            >
-              移動
-            </button>
+            <div className="move-group">
+              <select
+                value={moveTarget}
+                onChange={(e) => setMoveTarget(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">移動先...</option>
+                {MOVABLE_GTD_KEYS
+                  .filter((k) => k !== parent.gtdCategory)
+                  .map((k) => (
+                    <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
+                  ))}
+              </select>
+              <button
+                className="btn"
+                onClick={handleMove}
+                disabled={busy || !moveTarget}
+              >
+                移動
+              </button>
+            </div>
           </div>
         </td>
       </tr>
@@ -160,6 +171,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           task={child}
           onDone={onDone}
           onMove={onMove}
+          onDetail={onDetail}
         />
       ))}
 
@@ -182,10 +194,12 @@ function ChildTaskRow({
   task,
   onDone,
   onMove,
+  onDetail,
 }: {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
+  onDetail: (number: number) => void;
 }) {
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
@@ -240,6 +254,14 @@ function ChildTaskRow({
       <td>
         <div className="task-actions">
           <button
+            className="btn"
+            onClick={() => onDetail(task.number)}
+            disabled={busy}
+            title="詳細を表示"
+          >
+            詳細
+          </button>
+          <button
             className="btn btn-danger"
             onClick={handleDone}
             disabled={busy}
@@ -247,25 +269,27 @@ function ChildTaskRow({
           >
             完了
           </button>
-          <select
-            value={moveTarget}
-            onChange={(e) => setMoveTarget(e.target.value)}
-            disabled={busy}
-          >
-            <option value="">移動先...</option>
-            {MOVABLE_GTD_KEYS
-              .filter((k) => k !== task.gtdCategory)
-              .map((k) => (
-                <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
-              ))}
-          </select>
-          <button
-            className="btn"
-            onClick={handleMove}
-            disabled={busy || !moveTarget}
-          >
-            移動
-          </button>
+          <div className="move-group">
+            <select
+              value={moveTarget}
+              onChange={(e) => setMoveTarget(e.target.value)}
+              disabled={busy}
+            >
+              <option value="">移動先...</option>
+              {MOVABLE_GTD_KEYS
+                .filter((k) => k !== task.gtdCategory)
+                .map((k) => (
+                  <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
+                ))}
+            </select>
+            <button
+              className="btn"
+              onClick={handleMove}
+              disabled={busy || !moveTarget}
+            >
+              移動
+            </button>
+          </div>
         </div>
       </td>
     </tr>

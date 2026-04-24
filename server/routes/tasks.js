@@ -55,6 +55,23 @@ router.post('/tasks', async (req, res) => {
 });
 
 /**
+ * GET /api/tasks/:number
+ * タスクの詳細情報（担当者・コメントを含む）を取得する
+ */
+router.get('/tasks/:number', async (req, res) => {
+  try {
+    const num = parseInt(req.params.number, 10);
+    if (!num || num <= 0) {
+      return res.status(400).json({ error: '無効な Issue 番号です' });
+    }
+    const result = await repo.getDetail(req._tenant, num);
+    res.json(result);
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+/**
  * POST /api/tasks/:number/done
  * タスクを完了（Issue クローズ）する
  * Body: { withChildren?: boolean }

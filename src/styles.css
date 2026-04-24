@@ -211,6 +211,13 @@ tr:hover td { background: #f6f8fa; }
   flex-wrap: wrap;
 }
 
+.move-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .task-actions select {
   padding: 4px 6px;
   border: 1px solid var(--border);
@@ -254,6 +261,16 @@ tr:hover td { background: #f6f8fa; }
 }
 
 .page-header h2 { margin: 0; }
+
+.gtd-tip {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+}
 
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
@@ -409,4 +426,126 @@ tr:hover td { background: #f6f8fa; }
 .btn-ghost:hover {
   background: var(--bg);
   color: var(--fg);
+}
+
+/* ===== タスク詳細モーダル ===== */
+
+.task-detail-modal {
+  max-width: 600px;
+  width: 94%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.task-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.task-detail-header .modal-title {
+  margin: 0;
+  flex: 1;
+  word-break: break-word;
+}
+
+.task-detail-close {
+  flex-shrink: 0;
+  font-size: 14px;
+  padding: 2px 8px;
+}
+
+.task-detail-section {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.task-detail-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+.task-detail-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--fg);
+}
+
+.task-detail-none {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.task-detail-body-section {
+  margin-top: 12px;
+}
+
+.task-detail-body {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 6px 0 0;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: inherit;
+}
+
+.task-detail-comments {
+  margin-top: 14px;
+}
+
+.task-detail-comment {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
+.task-detail-comment-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.task-detail-comment-author {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.task-detail-comment-date {
+  color: var(--muted);
+}
+
+.task-detail-comment-body {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-family: inherit;
+}
+
+.task-detail-loading,
+.task-detail-error {
+  padding: 16px 0;
+  color: var(--muted);
+  text-align: center;
 }

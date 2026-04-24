@@ -5,9 +5,10 @@ interface Props {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
+  onDetail: (number: number) => void;
 }
 
-export default function TaskRow({ task, onDone, onMove }: Props) {
+export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -55,6 +56,14 @@ export default function TaskRow({ task, onDone, onMove }: Props) {
       <td>
         <div className="task-actions">
           <button
+            className="btn"
+            onClick={() => onDetail(task.number)}
+            disabled={busy}
+            title="詳細を表示"
+          >
+            詳細
+          </button>
+          <button
             className="btn btn-danger"
             onClick={handleDone}
             disabled={busy}
@@ -62,25 +71,27 @@ export default function TaskRow({ task, onDone, onMove }: Props) {
           >
             完了
           </button>
-          <select
-            value={moveTarget}
-            onChange={(e) => setMoveTarget(e.target.value)}
-            disabled={busy}
-          >
-            <option value="">移動先...</option>
-            {MOVABLE_GTD_KEYS
-              .filter((k) => k !== task.gtdCategory)
-              .map((k) => (
-                <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
-              ))}
-          </select>
-          <button
-            className="btn"
-            onClick={handleMove}
-            disabled={busy || !moveTarget}
-          >
-            移動
-          </button>
+          <div className="move-group">
+            <select
+              value={moveTarget}
+              onChange={(e) => setMoveTarget(e.target.value)}
+              disabled={busy}
+            >
+              <option value="">移動先...</option>
+              {MOVABLE_GTD_KEYS
+                .filter((k) => k !== task.gtdCategory)
+                .map((k) => (
+                  <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
+                ))}
+            </select>
+            <button
+              className="btn"
+              onClick={handleMove}
+              disabled={busy || !moveTarget}
+            >
+              移動
+            </button>
+          </div>
         </div>
       </td>
     </tr>
