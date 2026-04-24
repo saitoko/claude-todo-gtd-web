@@ -134,6 +134,15 @@ function handleError(res, err) {
     });
   }
 
+  if (err.code === 'PARENT_CLOSE_FAILED') {
+    return res.status(500).json({
+      error: err.message,
+      closedChildren: err.closedChildren || [],
+      parentStillOpen: true,
+      cause: err.cause || '',
+    });
+  }
+
   res.status(500).json({ error: '内部エラー', detail: err.message });
 }
 

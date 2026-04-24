@@ -11,8 +11,10 @@ const PROJECT_LABEL = 'project';
 
 // 表示名マップ（絵文字付きラベル文字列）
 // 注意: todo-engine.js の GTD_DISPLAY と一致させること
+// 警告: このオブジェクトはサーバー側（ラベル付与・フィルタ）用。
+//       フロント側の GTD_DISPLAY（src/lib/api.ts）は UI 表示専用で別物。
 const GTD_DISPLAY = {
-  next:      '🎯 next',
+  next:      '✅ next',
   routine:   '🔁 routine',
   inbox:     '📥 inbox',
   waiting:   '⏳ waiting',
@@ -47,7 +49,7 @@ function getGtdCategory(labels) {
     if (GTD_LABELS.includes(norm)) return norm;
     if (norm === PROJECT_LABEL) return PROJECT_LABEL;
   }
-  return 'inbox'; // ラベルなし → inbox 扱い
+  return null; // ラベルなし → null（UIに表示しない。ラベル漏れは CLI で気づける）
 }
 
 module.exports = {

@@ -18,9 +18,14 @@ try {
   process.exit(1);
 }
 
+const PORT = Number(process.env.PORT || 5175);
+const VITE_PORT = Number(process.env.VITE_PORT || 5176);
+
 const app = express();
 
-app.use(cors());
+// Phase 1: localhost のみ許可（Vite dev server オリジン）
+// TODO(Phase 2): env化（ALLOWED_ORIGIN 環境変数で制御）
+app.use(cors({ origin: `http://localhost:${VITE_PORT}` }));
 app.use(express.json());
 
 // Phase 1: TenantContext をリクエストに注入（Phase 2/3 で差し替えポイント）
@@ -42,9 +47,6 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-const PORT = Number(process.env.PORT || 5175);
-const VITE_PORT = Number(process.env.VITE_PORT || 5176);
-
 // 本番ビルドがあれば配信、なければ dev モードとして Vite へリダイレクト
 const distDir = path.join(__dirname, '..', 'dist');
 const hasDist = fs.existsSync(path.join(distDir, 'index.html'));
@@ -63,7 +65,9 @@ if (hasDist) {
   });
 }
 
-app.listen(PORT, () => {
+// Phase 1: localhost のみバインド（外部NICには露出しない）
+// TODO(Phase 2): 外部公開時は '0.0.0.0' またはリバースプロキシに変更
+app.listen(PORT, '127.0.0.1', () => {
   process.stdout.write('\n');
   process.stdout.write('========================================\n');
   process.stdout.write('  todo-manager\n');

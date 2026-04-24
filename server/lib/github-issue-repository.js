@@ -25,7 +25,8 @@ class GitHubIssueRepository {
 
     const tasks = raw
       .filter(i => !i.closedAt) // オープンのみ
-      .map(i => this._normalize(i));
+      .map(i => this._normalize(i))
+      .filter(t => t.gtdCategory !== null); // ラベル漏れは除外（CLIで気づける）
 
     // byCategory 集計
     const byCategory = {};
@@ -122,7 +123,17 @@ class GitHubIssueRepository {
       }
     }
 
-    await callEngineJson(tenant, ['close-issue', String(issueNumber)]);
+    try {
+      await callEngineJson(tenant, ['close-issue', String(issueNumber)]);
+    } catch (parentErr) {
+      // 子は全件成功済みだが親のクローズに失敗した場合
+      const error = new Error(`親プロジェクト #${issueNumber} のcloseに失敗`);
+      error.code = 'PARENT_CLOSE_FAILED';
+      error.closedChildren = closedChildren;
+      error.parentStillOpen = true;
+      error.cause = parentErr.message || String(parentErr);
+      throw error;
+    }
     return { closedChildren };
   }
 

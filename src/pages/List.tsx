@@ -97,7 +97,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
       <div className="page-header">
         <h2>{displayName}</h2>
         {!loading && (
-          <span className="badge gtd-{gtd}" style={{ fontSize: 13 }}>
+          <span className={`badge gtd-${gtd}`} style={{ fontSize: 13 }}>
             {tasks.length} 件
           </span>
         )}

@@ -45,7 +45,23 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
     try {
       if (choice === 'withChildren') {
         // サーバー側で子→親の順にクローズ。完了後はリスト再フェッチのみ
-        await api.doneTask(parent.number, { withChildren: true });
+        try {
+          await api.doneTask(parent.number, { withChildren: true });
+        } catch (err: unknown) {
+          // 部分成功（子はclose済み・親はopenのまま）の場合に詳細を表示
+          const e = err as Record<string, unknown>;
+          if (e && e.parentStillOpen === true) {
+            const closed = Array.isArray(e.closedChildren) ? e.closedChildren.join(', #') : '';
+            const msg = closed
+              ? `子タスク (#${closed}) はclose済みです。\n親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${e.cause ?? ''}`
+              : `親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${e.cause ?? ''}`;
+            alert(msg);
+          } else {
+            alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+          }
+          await onRefresh();
+          return;
+        }
         await onRefresh();
       } else {
         // parentOnly: 親だけ閉じる（従来の onDone を再利用）
