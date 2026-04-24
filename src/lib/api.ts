@@ -8,12 +8,14 @@ export interface Task {
   body: string;
   due: string | null;
   priority: string | null; // 'p1' | 'p2' | 'p3' | null
+  parentProject?: number | null; // 親プロジェクトの Issue 番号（body の `project: #N` から抽出）
 }
 
 export interface TaskListResponse {
   tasks: Task[];
   total: number;
   byCategory: Record<string, number>;
+  childTasks?: Task[]; // project カテゴリ表示時のみ含まれる子タスク一覧
 }
 
 export interface AddTaskInput {

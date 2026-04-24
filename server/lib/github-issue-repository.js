@@ -17,7 +17,7 @@ class GitHubIssueRepository {
    *
    * @param {{ owner, repo, token }} tenant
    * @param {string|null} gtdFilter - 'inbox'/'next'/... | null（全カテゴリ）
-   * @returns {Promise<{ tasks: Task[], total: number, byCategory: Record<string,number> }>}
+   * @returns {Promise<{ tasks: Task[], total: number, byCategory: Record<string,number>, childTasks?: Task[] }>}
    */
   async list(tenant, gtdFilter = null) {
     const raw = await callEngineJson(tenant, ['list-issues']);
@@ -31,6 +31,18 @@ class GitHubIssueRepository {
     const byCategory = {};
     for (const task of tasks) {
       byCategory[task.gtdCategory] = (byCategory[task.gtdCategory] || 0) + 1;
+    }
+
+    // project フィルタの場合はツリー用に子タスクも返す
+    if (gtdFilter === 'project') {
+      const projectTasks = tasks.filter(t => t.gtdCategory === 'project');
+      const childTasks = tasks.filter(t => t.parentProject != null);
+      return {
+        tasks: projectTasks,
+        total: tasks.length,
+        byCategory,
+        childTasks,
+      };
     }
 
     // フィルタリング
@@ -103,6 +115,9 @@ class GitHubIssueRepository {
     const due = this._extractField(issue.body, 'due');
     const priority = this._extractPriority(labelNames);
 
+    // 親プロジェクト番号の抽出（body の `project: #N` から）
+    const parentProject = this._extractParentProject(issue.body);
+
     return {
       number: issue.number,
       title: issue.title,
@@ -111,6 +126,7 @@ class GitHubIssueRepository {
       body: issue.body || '',
       due,
       priority,
+      parentProject,
     };
   }
 
@@ -133,6 +149,18 @@ class GitHubIssueRepository {
       if (/^p[123]$/.test(name)) return name;
     }
     return null;
+  }
+
+  /**
+   * body から `project: #N` 形式の親プロジェクト番号を抽出する
+   * @private
+   * @returns {number|null}
+   */
+  _extractParentProject(body) {
+    const raw = this._extractField(body, 'project');
+    if (!raw) return null;
+    const num = parseInt(raw.replace(/^#/, ''), 10);
+    return isNaN(num) ? null : num;
   }
 }
 
