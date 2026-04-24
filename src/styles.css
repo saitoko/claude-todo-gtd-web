@@ -640,3 +640,62 @@ tr:hover td { background: #f6f8fa; }
   display: flex;
   gap: 8px;
 }
+
+/* ===== 検索 ===== */
+
+.search-input-wrap {
+  padding: 0 2px 10px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--card);
+  color: var(--fg);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2);
+}
+
+.search-result-group-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.search-empty,
+.search-hint {
+  padding: 40px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.search-error-banner {
+  padding: 8px 12px;
+  background: #fff5f5;
+  border: 1px solid #ffc1c1;
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.search-body-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  cursor: pointer;
+}

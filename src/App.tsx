@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import CategoryNav from './components/CategoryNav';
 import List from './pages/List';
+import Search from './pages/Search';
 import { GTD_KEYS, type GtdKey, type TaskListResponse } from './lib/api';
 import { useTaskCache } from './lib/useTaskCache';
 
@@ -64,6 +65,10 @@ export default function App() {
                 invalidateCache={invalidateCache}
               />
             }
+          />
+          <Route
+            path="/search"
+            element={<Search getCache={getCache} setCache={setCache} />}
           />
         </Routes>
       </main>
