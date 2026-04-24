@@ -19,6 +19,7 @@ export interface UseSearchReturn {
 export function useSearch(
   getCache: (gtd: GtdKey) => TaskListResponse | null,
   setCache: (gtd: GtdKey, data: TaskListResponse) => void,
+  refreshKey: number = 0,
 ): UseSearchReturn {
   const [query, setQuery] = useState('');
   const [searchBodyEnabled, setSearchBodyEnabled] = useState(false);
@@ -127,9 +128,9 @@ export function useSearch(
       isMounted = false;
       clearTimeout(timerId);
     };
-    // searchBodyEnabled も依存に含めて本文ON/OFF切替時に即再検索する
+    // searchBodyEnabled / refreshKey も依存に含めて本文ON/OFF切替・操作後再検索に対応する
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, searchBodyEnabled]);
+  }, [query, searchBodyEnabled, refreshKey]);
 
   return {
     query,

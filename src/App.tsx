@@ -68,7 +68,7 @@ export default function App() {
           />
           <Route
             path="/search"
-            element={<Search getCache={getCache} setCache={setCache} />}
+            element={<Search getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} />}
           />
         </Routes>
       </main>

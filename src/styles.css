@@ -92,22 +92,22 @@ h2 {
   font-size: 18px;
 }
 
-/* タスク追加フォーム */
+/* タスク追加フォーム行（フォーム＋更新ボタン） */
+.add-task-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
 .add-task-form {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
   align-items: center;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
 }
 
 .add-task-form input[type="text"] {
-  flex: 1;
-  min-width: 200px;
+  width: 400px;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -125,11 +125,18 @@ h2 {
 /* テーブル */
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* タイトル列：長いテキストは折り返す */
+table td:nth-child(2),
+table th:nth-child(2) {
+  word-break: break-word;
 }
 
 th, td {
@@ -141,7 +148,8 @@ th, td {
 
 th { background: var(--bg); font-weight: 600; font-size: 13px; color: var(--muted); }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: #f6f8fa; }
+tbody tr:nth-child(even) td { background: #f8fafc; }
+tr:hover td { background: #eef2f7; }
 
 th.th-sortable { cursor: pointer; user-select: none; }
 th.th-sortable:hover { color: var(--fg); background: #eaedf0; }
@@ -215,7 +223,6 @@ th.th-sorted { color: var(--accent); }
   align-items: center;
   flex-wrap: wrap;
   width: 100%;
-  justify-content: flex-end;
 }
 
 .move-group {
@@ -270,7 +277,6 @@ th.th-sorted { color: var(--accent); }
 .page-header h2 { margin: 0; }
 
 .btn-refresh {
-  margin-left: auto;
   font-size: 16px;
   padding: 2px 8px;
   line-height: 1;

@@ -150,6 +150,10 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           </span>
         )}
         {tip && <span className="gtd-tip">{tip}</span>}
+      </div>
+
+      <div className="add-task-row">
+        <AddTaskForm onAdd={handleAdd} />
         <button
           className="btn btn-refresh"
           onClick={handleRefresh}
@@ -158,8 +162,6 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           title="リストを更新"
         >↻</button>
       </div>
-
-      <AddTaskForm onAdd={handleAdd} />
 
       {loading && <div className="loading">読み込み中...</div>}
 
@@ -178,9 +180,9 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
             <tr>
               <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
-              <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
+              <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
               <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 280 }}>操作</th>
+              <th style={{ width: 190 }}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -206,9 +208,9 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
             <tr>
               <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
-              <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
+              <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
               <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 280 }}>操作</th>
+              <th style={{ width: 190 }}>操作</th>
             </tr>
           </thead>
           <tbody>
