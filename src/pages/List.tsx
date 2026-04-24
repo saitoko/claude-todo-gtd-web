@@ -141,7 +141,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         </button>
       </div>
 
-      <AddTaskForm currentGtd={gtd} onAdd={handleAdd} />
+      <AddTaskForm onAdd={handleAdd} />
 
       {loading && <div className="loading">読み込み中...</div>}
 

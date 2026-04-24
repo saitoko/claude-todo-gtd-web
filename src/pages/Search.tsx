@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, GTD_DISPLAY, type GtdKey, type TaskListResponse } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
+import AddTaskForm from '../components/AddTaskForm';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskRow from '../components/TaskRow';
 
@@ -59,6 +60,12 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setRefreshKey(k => k + 1);
   }
 
+  async function handleAdd(title: string, gtdCategory: string) {
+    await api.addTask({ title, gtdCategory });
+    invalidateCache(gtdCategory as GtdKey);
+    setRefreshKey(k => k + 1);
+  }
+
   // カテゴリ別にグルーピング（GTD_KEYS の順序を維持）
   const grouped = new Map<string, typeof results>();
   for (const result of results) {
@@ -77,6 +84,8 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
           <span className="gtd-tip">{results.length} 件</span>
         )}
       </div>
+
+      <AddTaskForm onAdd={handleAdd} />
 
       {/* 本文検索トグル */}
       <label className="search-body-toggle">

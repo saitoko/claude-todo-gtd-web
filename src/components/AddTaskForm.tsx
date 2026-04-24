@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
 
 interface Props {
-  currentGtd: string;
   onAdd: (title: string, gtdCategory: string) => Promise<void>;
 }
 
-export default function AddTaskForm({ currentGtd, onAdd }: Props) {
+export default function AddTaskForm({ onAdd }: Props) {
   const [title, setTitle] = useState('');
-  const [gtdCategory, setGtdCategory] = useState(currentGtd);
+  const [gtdCategory, setGtdCategory] = useState('inbox');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
