@@ -57,6 +57,8 @@ router.post('/tasks', async (req, res) => {
 /**
  * POST /api/tasks/:number/done
  * タスクを完了（Issue クローズ）する
+ * Body: { withChildren?: boolean }
+ * Response: { ok: true, closedChildren?: number[] }
  */
 router.post('/tasks/:number/done', async (req, res) => {
   try {
@@ -65,8 +67,9 @@ router.post('/tasks/:number/done', async (req, res) => {
       return res.status(400).json({ error: '無効な Issue 番号です' });
     }
 
-    await repo.done(req._tenant, num);
-    res.json({ ok: true });
+    const withChildren = !!(req.body && req.body.withChildren);
+    const result = await repo.done(req._tenant, num, { withChildren });
+    res.json({ ok: true, closedChildren: result.closedChildren });
   } catch (err) {
     handleError(res, err);
   }
@@ -122,6 +125,13 @@ function handleError(res, err) {
     // engine の stderr メッセージをそのまま伝播
     const detail = err.engineStderr ? err.engineStderr.trim() : err.message;
     return res.status(500).json({ error: 'engine エラー', detail });
+  }
+
+  if (err.code === 'CHILD_CLOSE_FAILED') {
+    return res.status(500).json({
+      error: err.message,
+      failedChildren: err.failedChildren || [],
+    });
   }
 
   res.status(500).json({ error: '内部エラー', detail: err.message });

@@ -1,27 +1,56 @@
 import { useState } from 'react';
-import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
+import { createPortal } from 'react-dom';
+import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
+import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 
 interface Props {
   parent: Task;
   children: Task[];
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
+  /** 子タスクも含めて完了した後など、APIを再呼び出しせずリスト再フェッチだけしたいとき */
+  onRefresh: () => Promise<void>;
 }
 
-export default function ProjectTreeRow({ parent, children, onDone, onMove }: Props) {
+export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = parent.due != null && parent.due < today;
   const hasChildren = children.length > 0;
 
   async function handleDone() {
-    if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
+    if (hasChildren) {
+      // 子タスクがある場合はモーダルで3択確認
+      setShowConfirm(true);
+      return;
+    }
+    // 子タスクなし → 従来通り即完了
     setBusy(true);
     try {
       await onDone(parent.number);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirmChoice(choice: ConfirmDialogChoice) {
+    setShowConfirm(false);
+    if (choice === 'cancel') return;
+
+    setBusy(true);
+    try {
+      if (choice === 'withChildren') {
+        // サーバー側で子→親の順にクローズ。完了後はリスト再フェッチのみ
+        await api.doneTask(parent.number, { withChildren: true });
+        await onRefresh();
+      } else {
+        // parentOnly: 親だけ閉じる（従来の onDone を再利用）
+        await onDone(parent.number);
+      }
     } finally {
       setBusy(false);
     }
@@ -117,6 +146,17 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove }: Pro
           onMove={onMove}
         />
       ))}
+
+      {/* 完了確認ダイアログ（Portal 経由で body 直下にマウント） */}
+      {showConfirm && createPortal(
+        <ConfirmDialog
+          projectNumber={parent.number}
+          projectTitle={parent.title}
+          childCount={children.length}
+          onChoice={handleConfirmChoice}
+        />,
+        document.body
+      )}
     </>
   );
 }

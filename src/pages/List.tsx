@@ -82,6 +82,10 @@ export default function List({ gtd, onCategoryChange }: Props) {
     await fetchTasks();
   }
 
+  async function handleRefresh() {
+    await fetchTasks();
+  }
+
   const displayName = GTD_DISPLAY[gtd] ?? gtd;
   const isProjectView = gtd === 'project';
 
@@ -131,6 +135,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
                 children={children}
                 onDone={handleDone}
                 onMove={handleMove}
+                onRefresh={handleRefresh}
               />
             ))}
           </tbody>

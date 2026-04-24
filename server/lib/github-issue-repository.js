@@ -87,9 +87,43 @@ class GitHubIssueRepository {
    *
    * @param {{ owner, repo, token }} tenant
    * @param {number} issueNumber
+   * @param {{ withChildren?: boolean }} [options]
+   * @returns {Promise<{ closedChildren?: number[] }>}
    */
-  async done(tenant, issueNumber) {
+  async done(tenant, issueNumber, options = {}) {
+    const closedChildren = [];
+
+    if (options.withChildren) {
+      // list-issues で全件取得し、parentProject === issueNumber の子タスクを先にクローズする
+      const allResult = await callEngineJson(tenant, ['list-issues']);
+      const allTasks = allResult
+        .filter(i => !i.closedAt)
+        .map(i => this._normalize(i));
+
+      const children = allTasks.filter(t => t.parentProject === issueNumber);
+
+      const failedNumbers = [];
+      for (const child of children) {
+        try {
+          await callEngineJson(tenant, ['close-issue', String(child.number)]);
+          closedChildren.push(child.number);
+        } catch (err) {
+          failedNumbers.push(child.number);
+        }
+      }
+
+      if (failedNumbers.length > 0) {
+        const error = new Error(
+          `子タスクのクローズに失敗しました: #${failedNumbers.join(', #')}。親プロジェクトはオープンのままです。`
+        );
+        error.code = 'CHILD_CLOSE_FAILED';
+        error.failedChildren = failedNumbers;
+        throw error;
+      }
+    }
+
     await callEngineJson(tenant, ['close-issue', String(issueNumber)]);
+    return { closedChildren };
   }
 
   /**

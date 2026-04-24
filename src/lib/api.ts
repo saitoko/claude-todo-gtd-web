@@ -80,9 +80,15 @@ export const api = {
 
   /**
    * タスクを完了する
+   * @param number - Issue 番号
+   * @param options.withChildren - true の場合、子タスクも全件クローズしてから親をクローズ
    */
-  doneTask: (number: number): Promise<{ ok: boolean }> =>
-    request<{ ok: boolean }>(`/api/tasks/${number}/done`, { method: 'POST' }),
+  doneTask: (number: number, options?: { withChildren?: boolean }): Promise<{ ok: boolean; closedChildren?: number[] }> =>
+    request<{ ok: boolean; closedChildren?: number[] }>(`/api/tasks/${number}/done`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options ?? {}),
+    }),
 
   /**
    * タスクの GTD カテゴリを変更する
