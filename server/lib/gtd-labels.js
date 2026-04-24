@@ -14,7 +14,7 @@ const PROJECT_LABEL = 'project';
 // 警告: このオブジェクトはサーバー側（ラベル付与・フィルタ）用。
 //       フロント側の GTD_DISPLAY（src/lib/api.ts）は UI 表示専用で別物。
 const GTD_DISPLAY = {
-  next:      '✅ next',
+  next:      '🎯 next',
   routine:   '🔁 routine',
   inbox:     '📥 inbox',
   waiting:   '⏳ waiting',
