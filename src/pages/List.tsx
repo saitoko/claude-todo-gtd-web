@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api, type Task, type TaskListResponse, GTD_DISPLAY, type GtdKey } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
+import { sortTasks, type SortKey } from '../lib/sortTasks';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
 import AddTaskForm from '../components/AddTaskForm';
@@ -14,13 +15,9 @@ interface Props {
   invalidateCache: (gtd?: GtdKey) => void;
 }
 
-type SortKey = 'number' | 'title' | 'priority' | 'due';
-
 const GTD_ORDER: Record<string, number> = {
   inbox: 0, next: 1, waiting: 2, someday: 3, routine: 4,
 };
-
-const PRIORITY_ORDER: Record<string, number> = { p1: 1, p2: 2, p3: 3 };
 
 function buildProjectTree(
   projectTasks: Task[],
@@ -36,30 +33,6 @@ function buildProjectTree(
         return b.number - a.number;
       });
     return { parent, children };
-  });
-}
-
-function sortTasks(tasks: Task[], key: SortKey, dir: 'asc' | 'desc'): Task[] {
-  return [...tasks].sort((a, b) => {
-    let cmp = 0;
-    switch (key) {
-      case 'number':
-        cmp = a.number - b.number;
-        break;
-      case 'title':
-        cmp = a.title.localeCompare(b.title, 'ja');
-        break;
-      case 'priority':
-        cmp = (PRIORITY_ORDER[a.priority ?? ''] ?? 99) - (PRIORITY_ORDER[b.priority ?? ''] ?? 99);
-        break;
-      case 'due': {
-        const da = a.due ?? '9999-99-99';
-        const db = b.due ?? '9999-99-99';
-        cmp = da < db ? -1 : da > db ? 1 : 0;
-        break;
-      }
-    }
-    return dir === 'asc' ? cmp : -cmp;
   });
 }
 

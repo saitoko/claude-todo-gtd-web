@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, GTD_DISPLAY, type GtdKey, type TaskListResponse } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
+import { sortTasks, type SortKey } from '../lib/sortTasks';
 import AddTaskForm from '../components/AddTaskForm';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskRow from '../components/TaskRow';
@@ -16,6 +17,8 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTaskNumber, setActiveTaskNumber] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const {
     query,
@@ -42,6 +45,28 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     }
   }, [query, setSearchParams]);
 
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  function thProps(key: SortKey) {
+    const active = sortKey === key;
+    return {
+      className: `th-sortable${active ? ' th-sorted' : ''}`,
+      onClick: () => handleSort(key),
+    };
+  }
+
+  function sortIcon(key: SortKey) {
+    if (sortKey !== key) return null;
+    return <span className="sort-icon">{sortDir === 'asc' ? '▲' : '▼'}</span>;
+  }
+
   async function handleDone(number: number, gtdCategory: string) {
     await api.doneTask(number);
     invalidateCache(gtdCategory as GtdKey);
@@ -66,13 +91,11 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setRefreshKey(k => k + 1);
   }
 
-  // カテゴリ別にグルーピング（GTD_KEYS の順序を維持）
+  // カテゴリ別にグルーピング
   const grouped = new Map<string, typeof results>();
   for (const result of results) {
     const cat = result.task.gtdCategory;
-    if (!grouped.has(cat)) {
-      grouped.set(cat, []);
-    }
+    if (!grouped.has(cat)) grouped.set(cat, []);
     grouped.get(cat)!.push(result);
   }
 
@@ -97,69 +120,62 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
         本文も検索する
       </label>
 
-      {/* エラーバナー（部分エラーの場合も結果は表示する） */}
       {error && (
         <div className="search-error-banner">
           一部カテゴリの取得に失敗しました: {error}
         </div>
       )}
 
-      {/* ローディング */}
-      {loading && (
-        <div className="loading">検索中...</div>
-      )}
+      {loading && <div className="loading">検索中...</div>}
 
-      {/* クエリ空 */}
       {!loading && !query && (
         <div className="search-hint">キーワードを入力してください</div>
       )}
 
-      {/* 結果 0 件 */}
       {!loading && query && results.length === 0 && !error && (
         <div className="search-empty">"{query}" に一致するタスクはありません</div>
       )}
 
-      {/* 検索結果 */}
       {!loading && results.length > 0 && (
         <div className="task-list">
-          {Array.from(grouped.entries()).map(([cat, catResults]) => (
-            <div key={cat}>
-              {/* カテゴリグループヘッダー */}
-              <div className="search-result-group-header">
-                {GTD_DISPLAY[cat as GtdKey] ?? cat}
-                <span className="nav-badge" style={{ marginLeft: 6 }}>{catResults.length}</span>
+          {Array.from(grouped.entries()).map(([cat, catResults]) => {
+            const tasks = catResults.map(r => r.task);
+            const sorted = sortKey ? sortTasks(tasks, sortKey, sortDir) : tasks;
+            return (
+              <div key={cat}>
+                <div className="search-result-group-header">
+                  {GTD_DISPLAY[cat as GtdKey] ?? cat}
+                  <span className="nav-badge" style={{ marginLeft: 6 }}>{catResults.length}</span>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+                      <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
+                      <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
+                      <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
+                      <th style={{ width: 280 }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((task) => (
+                      <TaskRow
+                        key={task.number}
+                        task={task}
+                        onDone={() => handleDone(task.number, task.gtdCategory)}
+                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                        onDetail={(num) => setActiveTaskNumber(num)}
+                        onEdit={() => handleEdit(task.gtdCategory)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              {/* 各タスク行 */}
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: 60 }}>#</th>
-                    <th>タイトル</th>
-                    <th style={{ width: 60 }}>優先度</th>
-                    <th style={{ width: 100 }}>期日</th>
-                    <th style={{ width: 280 }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {catResults.map(({ task }) => (
-                    <TaskRow
-                      key={task.number}
-                      task={task}
-                      onDone={() => handleDone(task.number, task.gtdCategory)}
-                      onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                      onDetail={(num) => setActiveTaskNumber(num)}
-                      onEdit={() => handleEdit(task.gtdCategory)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* タスク詳細モーダル */}
       {activeTaskNumber !== null && (
         <TaskDetailModal
           taskNumber={activeTaskNumber}
