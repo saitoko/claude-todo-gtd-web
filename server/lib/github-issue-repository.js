@@ -188,6 +188,56 @@ class GitHubIssueRepository {
   }
 
   /**
+   * リポジトリのラベル一覧を取得する
+   *
+   * @param {{ owner, repo, token }} tenant
+   * @returns {Promise<Array<{ name: string, color: string }>>}
+   */
+  async listLabels(tenant) {
+    const labels = await callEngineJson(tenant, ['list-labels']);
+    return labels;
+  }
+
+  /**
+   * タスクの属性を更新する
+   *
+   * @param {{ owner, repo, token }} tenant
+   * @param {number} issueNumber
+   * @param {{ title?: string, body?: string, addLabels?: string[], removeLabels?: string[] }} patch
+   */
+  async update(tenant, issueNumber, patch) {
+    // 1. title / body の更新
+    if (patch.title !== undefined || patch.body !== undefined) {
+      const input = {};
+      if (patch.title !== undefined) input.title = patch.title;
+      if (patch.body !== undefined) input.body = patch.body;
+      await callEngineJson(
+        tenant,
+        ['edit-issue', String(issueNumber)],
+        { ISSUE_INPUT_ENV: JSON.stringify(input) }
+      );
+    }
+
+    // 2. ラベル除去
+    if (patch.removeLabels && patch.removeLabels.length > 0) {
+      await callEngineJson(
+        tenant,
+        ['remove-labels', String(issueNumber)],
+        { LABELS_ENV: patch.removeLabels.join(',') }
+      );
+    }
+
+    // 3. ラベル追加
+    if (patch.addLabels && patch.addLabels.length > 0) {
+      await callEngineJson(
+        tenant,
+        ['add-labels', String(issueNumber)],
+        { LABELS_ENV: patch.addLabels.join(',') }
+      );
+    }
+  }
+
+  /**
    * 生の Issue データを Task 型に正規化する
    * @private
    */

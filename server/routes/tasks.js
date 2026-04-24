@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { GitHubIssueRepository } = require('../lib/github-issue-repository');
-const { GTD_LABELS, PROJECT_LABEL } = require('../lib/gtd-labels');
+const { GTD_LABELS, PROJECT_LABEL, normLabel } = require('../lib/gtd-labels');
 
 const router = express.Router();
 const repo = new GitHubIssueRepository();
@@ -122,6 +122,61 @@ router.post('/tasks/:number/move', async (req, res) => {
     }
 
     await repo.move(req._tenant, num, targetGtd);
+    res.json({ ok: true });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+/**
+ * GET /api/labels
+ * リポジトリのラベル一覧を取得する
+ */
+router.get('/labels', async (req, res) => {
+  try {
+    const labels = await repo.listLabels(req._tenant);
+    res.json({ labels });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+/**
+ * PATCH /api/tasks/:number
+ * タスクの属性を更新する
+ * Body: { title?, body?, addLabels?, removeLabels? }
+ */
+router.patch('/tasks/:number', async (req, res) => {
+  try {
+    const num = parseInt(req.params.number, 10);
+    if (!num || num <= 0) {
+      return res.status(400).json({ error: '無効な Issue 番号です' });
+    }
+
+    const { title, body, addLabels, removeLabels } = req.body || {};
+
+    if (title !== undefined && !title.trim()) {
+      return res.status(400).json({ error: 'タイトルは1文字以上必要です' });
+    }
+
+    // GTDカテゴリラベルのガード
+    const GTD_ALL = [...GTD_LABELS, PROJECT_LABEL];
+    const labelsToCheck = [...(addLabels || []), ...(removeLabels || [])];
+    for (const label of labelsToCheck) {
+      if (GTD_ALL.includes(normLabel(label))) {
+        return res.status(400).json({
+          error: 'GTDカテゴリラベルは編集フォームで変更できません。移動機能を使ってください。',
+        });
+      }
+    }
+
+    const patch = {};
+    if (title !== undefined) patch.title = title.trim();
+    if (body !== undefined) patch.body = body;
+    if (addLabels && addLabels.length > 0) patch.addLabels = addLabels;
+    if (removeLabels && removeLabels.length > 0) patch.removeLabels = removeLabels;
+
+    await repo.update(req._tenant, num, patch);
     res.json({ ok: true });
   } catch (err) {
     handleError(res, err);

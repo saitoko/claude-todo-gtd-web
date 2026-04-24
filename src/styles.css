@@ -348,7 +348,9 @@ tr:hover td { background: #f6f8fa; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 36px; /* 展開ボタン幅 + gap 分のインデント */
+  margin-left: 22px; /* 展開ボタン幅に合わせて罫線位置を設定 */
+  border-left: 2px solid var(--border);
+  padding-left: 14px; /* 元の36px - 22px */
 }
 
 /* 子タスクの GTD カテゴリバッジ（小） */
@@ -548,4 +550,86 @@ tr:hover td { background: #f6f8fa; }
   padding: 16px 0;
   color: var(--muted);
   text-align: center;
+}
+
+/* ===== インライン編集フォーム ===== */
+
+.edit-form-row-tr td {
+  background: #f0f7ff;
+  padding: 0;
+  border-bottom: 2px solid var(--accent);
+}
+
+.edit-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-form-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.edit-form-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 56px;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+
+.edit-form-field input[type="text"],
+.edit-form-field input[type="date"],
+.edit-form-field select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--card);
+  min-width: 0;
+}
+
+.edit-form-field input[type="text"] { flex: 1; }
+
+.edit-form-field textarea {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 72px;
+  background: var(--card);
+}
+
+.edit-form-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.edit-form-tag-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.edit-form-error {
+  font-size: 12px;
+  color: var(--danger);
+  padding: 4px 0;
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: 8px;
 }

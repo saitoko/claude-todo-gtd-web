@@ -121,6 +121,30 @@ export const api = {
     request<TaskDetail>(`/api/tasks/${number}`),
 
   /**
+   * リポジトリのラベル一覧を取得する
+   */
+  listLabels: (): Promise<{ labels: Array<{ name: string; color: string }> }> =>
+    request('/api/labels'),
+
+  /**
+   * タスクの属性を更新する
+   */
+  updateTask: (
+    number: number,
+    patch: {
+      title?: string;
+      body?: string;
+      addLabels?: string[];
+      removeLabels?: string[];
+    }
+  ): Promise<{ ok: boolean }> =>
+    request<{ ok: boolean }>(`/api/tasks/${number}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+
+  /**
    * ヘルスチェック
    */
   health: (): Promise<{ ok: boolean; owner: string; repo: string; uptime: number }> =>

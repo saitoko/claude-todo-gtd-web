@@ -172,6 +172,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
                 onDone={handleDone}
                 onMove={handleMove}
                 onDetail={handleDetail}
+                onEdit={handleRefresh}
               />
             ))}
           </tbody>

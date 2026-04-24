@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
+import EditForm from './EditForm';
 
 interface Props {
   parent: Task;
@@ -18,6 +19,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = parent.due != null && parent.due < today;
@@ -105,7 +107,10 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
             ) : (
               <span className="expand-btn-placeholder" />
             )}
-            <span>{parent.title}</span>
+            <span
+              onClick={editOpen ? () => setEditOpen(false) : undefined}
+              style={editOpen ? { cursor: 'pointer' } : undefined}
+            >{parent.title}</span>
             {hasChildren && (
               <span className="child-count-badge">{children.length}件</span>
             )}
@@ -123,6 +128,14 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         </td>
         <td>
           <div className="task-actions">
+            <button
+              className="btn"
+              onClick={() => setEditOpen((prev) => !prev)}
+              disabled={busy}
+              title="編集"
+            >
+              ✏️
+            </button>
             <button
               className="btn"
               onClick={() => onDetail(parent.number)}
@@ -164,6 +177,18 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         </td>
       </tr>
 
+      {editOpen && (
+        <tr className="edit-form-row-tr">
+          <td colSpan={5}>
+            <EditForm
+              task={parent}
+              onSave={async () => { setEditOpen(false); await onRefresh(); }}
+              onCancel={() => setEditOpen(false)}
+            />
+          </td>
+        </tr>
+      )}
+
       {/* 子タスク行（展開時のみ） */}
       {expanded && children.map((child) => (
         <ChildTaskRow
@@ -172,6 +197,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           onDone={onDone}
           onMove={onMove}
           onDetail={onDetail}
+          onEdit={onRefresh}
         />
       ))}
 
@@ -195,14 +221,17 @@ function ChildTaskRow({
   onDone,
   onMove,
   onDetail,
+  onEdit,
 }: {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
   onDetail: (number: number) => void;
+  onEdit: () => Promise<void>;
 }) {
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = task.due != null && task.due < today;
@@ -229,69 +258,93 @@ function ChildTaskRow({
   }
 
   return (
-    <tr className="project-child-row">
-      <td>
-        <span className="issue-num">#{task.number}</span>
-      </td>
-      <td>
-        <div className="child-title-cell">
-          <span>{task.title}</span>
-          <span className={`badge gtd-${task.gtdCategory} gtd-badge-small`}>
-            {GTD_DISPLAY[task.gtdCategory as keyof typeof GTD_DISPLAY] ?? task.gtdCategory}
-          </span>
-        </div>
-      </td>
-      <td>
-        {task.priority && (
-          <span className={`badge pri-${task.priority}`}>{task.priority}</span>
-        )}
-      </td>
-      <td>
-        {task.due && (
-          <span className={`due-date${isOverdue ? ' overdue' : ''}`}>{task.due}</span>
-        )}
-      </td>
-      <td>
-        <div className="task-actions">
-          <button
-            className="btn"
-            onClick={() => onDetail(task.number)}
-            disabled={busy}
-            title="詳細を表示"
-          >
-            詳細
-          </button>
-          <button
-            className="btn btn-danger"
-            onClick={handleDone}
-            disabled={busy}
-            title="完了（Issue クローズ）"
-          >
-            完了
-          </button>
-          <div className="move-group">
-            <select
-              value={moveTarget}
-              onChange={(e) => setMoveTarget(e.target.value)}
-              disabled={busy}
-            >
-              <option value="">移動先...</option>
-              {MOVABLE_GTD_KEYS
-                .filter((k) => k !== task.gtdCategory)
-                .map((k) => (
-                  <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
-                ))}
-            </select>
+    <>
+      <tr className="project-child-row">
+        <td>
+          <span className="issue-num">#{task.number}</span>
+        </td>
+        <td>
+          <div className="child-title-cell">
+            <span
+              onClick={editOpen ? () => setEditOpen(false) : undefined}
+              style={editOpen ? { cursor: 'pointer' } : undefined}
+            >{task.title}</span>
+            <span className={`badge gtd-${task.gtdCategory} gtd-badge-small`}>
+              {GTD_DISPLAY[task.gtdCategory as keyof typeof GTD_DISPLAY] ?? task.gtdCategory}
+            </span>
+          </div>
+        </td>
+        <td>
+          {task.priority && (
+            <span className={`badge pri-${task.priority}`}>{task.priority}</span>
+          )}
+        </td>
+        <td>
+          {task.due && (
+            <span className={`due-date${isOverdue ? ' overdue' : ''}`}>{task.due}</span>
+          )}
+        </td>
+        <td>
+          <div className="task-actions">
             <button
               className="btn"
-              onClick={handleMove}
-              disabled={busy || !moveTarget}
+              onClick={() => setEditOpen((prev) => !prev)}
+              disabled={busy}
+              title="編集"
             >
-              移動
+              ✏️
             </button>
+            <button
+              className="btn"
+              onClick={() => onDetail(task.number)}
+              disabled={busy}
+              title="詳細を表示"
+            >
+              詳細
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={handleDone}
+              disabled={busy}
+              title="完了（Issue クローズ）"
+            >
+              完了
+            </button>
+            <div className="move-group">
+              <select
+                value={moveTarget}
+                onChange={(e) => setMoveTarget(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">移動先...</option>
+                {MOVABLE_GTD_KEYS
+                  .filter((k) => k !== task.gtdCategory)
+                  .map((k) => (
+                    <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
+                  ))}
+              </select>
+              <button
+                className="btn"
+                onClick={handleMove}
+                disabled={busy || !moveTarget}
+              >
+                移動
+              </button>
+            </div>
           </div>
-        </div>
-      </td>
-    </tr>
+        </td>
+      </tr>
+      {editOpen && (
+        <tr className="edit-form-row-tr">
+          <td colSpan={5}>
+            <EditForm
+              task={task}
+              onSave={async () => { setEditOpen(false); await onEdit(); }}
+              onCancel={() => setEditOpen(false)}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
