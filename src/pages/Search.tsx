@@ -36,14 +36,15 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setQuery(q);
   }, [searchParams]);
 
-  // query 変更時に URL を同期
+  // query 変更時に URL を同期（setSearchParams は安定参照でないため依存配列から除外）
   useEffect(() => {
     if (query) {
       setSearchParams({ q: query }, { replace: true });
     } else {
       setSearchParams({}, { replace: true });
     }
-  }, [query, setSearchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {

@@ -146,14 +146,9 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <h2>{displayName}</h2>
         {!loading && (
           <span className={`badge gtd-${gtd}`} style={{ fontSize: 13 }}>
-            {tasks.length} 件
+            {tasks.length}
           </span>
         )}
-        {tip && <span className="gtd-tip">{tip}</span>}
-      </div>
-
-      <div className="add-task-row">
-        <AddTaskForm onAdd={handleAdd} />
         <button
           className="btn btn-refresh"
           onClick={handleRefresh}
@@ -161,9 +156,14 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           aria-label="リストを更新"
           title="リストを更新"
         >↻</button>
+        {tip && <span className="gtd-tip">{tip}</span>}
       </div>
 
-      {loading && <div className="loading">読み込み中...</div>}
+      <div className="add-task-row">
+        <AddTaskForm onAdd={handleAdd} />
+      </div>
+
+      {loading && tasks.length === 0 && <div className="loading">読み込み中...</div>}
 
       {!loading && error && (
         <div className="error">エラー: {error}</div>
@@ -174,7 +174,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
       )}
 
       {/* project カテゴリ: ツリー表示 */}
-      {!loading && !error && isProjectView && tasks.length > 0 && (
+      {!error && isProjectView && tasks.length > 0 && (
         <table>
           <thead>
             <tr>
@@ -202,7 +202,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
       )}
 
       {/* その他カテゴリ: フラット表示 */}
-      {!loading && !error && !isProjectView && tasks.length > 0 && (
+      {!error && !isProjectView && tasks.length > 0 && (
         <table>
           <thead>
             <tr>
