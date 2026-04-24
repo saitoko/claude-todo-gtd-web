@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GTD_DISPLAY, type GtdKey, type TaskListResponse } from '../lib/api';
+import { api, GTD_DISPLAY, type GtdKey, type TaskListResponse } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
 import TaskDetailModal from '../components/TaskDetailModal';
+import TaskRow from '../components/TaskRow';
 
 interface Props {
   getCache: (gtd: GtdKey) => TaskListResponse | null;
   setCache: (gtd: GtdKey, data: TaskListResponse) => void;
+  invalidateCache: (gtd?: GtdKey) => void;
 }
 
-export default function Search({ getCache, setCache }: Props) {
+export default function Search({ getCache, setCache, invalidateCache }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTaskNumber, setActiveTaskNumber] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const {
     query,
@@ -21,15 +24,13 @@ export default function Search({ getCache, setCache }: Props) {
     results,
     loading,
     error,
-  } = useSearch(getCache, setCache);
+  } = useSearch(getCache, setCache, refreshKey);
 
-  // URL クエリパラメータ q を初期値として反映
+  // URL クエリパラメータ q が変わったら query に反映
   useEffect(() => {
     const q = searchParams.get('q') ?? '';
     setQuery(q);
-    // 初回マウント時のみ実行
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // query 変更時に URL を同期
   useEffect(() => {
@@ -39,6 +40,24 @@ export default function Search({ getCache, setCache }: Props) {
       setSearchParams({}, { replace: true });
     }
   }, [query, setSearchParams]);
+
+  async function handleDone(number: number, gtdCategory: string) {
+    await api.doneTask(number);
+    invalidateCache(gtdCategory as GtdKey);
+    setRefreshKey(k => k + 1);
+  }
+
+  async function handleMove(number: number, targetGtd: string, currentGtd: string) {
+    await api.moveTask(number, targetGtd);
+    invalidateCache(currentGtd as GtdKey);
+    invalidateCache(targetGtd as GtdKey);
+    setRefreshKey(k => k + 1);
+  }
+
+  async function handleEdit(gtdCategory: string) {
+    invalidateCache(gtdCategory as GtdKey);
+    setRefreshKey(k => k + 1);
+  }
 
   // カテゴリ別にグルーピング（GTD_KEYS の順序を維持）
   const grouped = new Map<string, typeof results>();
@@ -103,47 +122,26 @@ export default function Search({ getCache, setCache }: Props) {
               </div>
 
               {/* 各タスク行 */}
-              <table className="task-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 60 }}>#</th>
+                    <th>タイトル</th>
+                    <th style={{ width: 60 }}>優先度</th>
+                    <th style={{ width: 100 }}>期日</th>
+                    <th style={{ width: 280 }}>操作</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {catResults.map(({ task, matchedIn }) => (
-                    <tr key={task.number} className="task-row">
-                      {/* Issue 番号 */}
-                      <td style={{ width: 48, whiteSpace: 'nowrap' }}>
-                        <span className="issue-num">#{task.number}</span>
-                      </td>
-
-                      {/* タイトル（クリックで詳細モーダル） */}
-                      <td>
-                        <button
-                          className="btn btn-ghost"
-                          style={{ textAlign: 'left', fontWeight: 500, padding: '0 4px', color: 'var(--fg)' }}
-                          onClick={() => setActiveTaskNumber(task.number)}
-                        >
-                          {task.title}
-                        </button>
-                        {matchedIn === 'body' && (
-                          <span className="badge" style={{ marginLeft: 6, fontSize: 10, color: 'var(--muted)', background: 'transparent', border: '1px solid var(--border)' }}>
-                            本文
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 優先度 */}
-                      <td style={{ width: 48, whiteSpace: 'nowrap' }}>
-                        {task.priority && (
-                          <span className={`badge priority-${task.priority}`}>
-                            {task.priority.toUpperCase()}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 期日 */}
-                      <td style={{ width: 100, whiteSpace: 'nowrap' }}>
-                        {task.due && (
-                          <span className="due-date">{task.due.slice(0, 10)}</span>
-                        )}
-                      </td>
-                    </tr>
+                  {catResults.map(({ task }) => (
+                    <TaskRow
+                      key={task.number}
+                      task={task}
+                      onDone={() => handleDone(task.number, task.gtdCategory)}
+                      onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                      onDetail={(num) => setActiveTaskNumber(num)}
+                      onEdit={() => handleEdit(task.gtdCategory)}
+                    />
                   ))}
                 </tbody>
               </table>
