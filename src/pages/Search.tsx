@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api, GTD_DISPLAY, type GtdKey, type TaskListResponse } from '../lib/api';
+import { api, GTD_DISPLAY, GTD_KEYS, type GtdKey, type TaskListResponse } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
 import AddTaskForm from '../components/AddTaskForm';
@@ -19,6 +19,9 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [isComposing, setIsComposing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     query,
@@ -92,9 +95,34 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setRefreshKey(k => k + 1);
   }
 
+  // 検索結果からGTDラベルを除いたラベル一覧を収集
+  const availableLabels = useMemo(() => {
+    const set = new Set<string>();
+    for (const { task } of results) {
+      for (const label of task.labels) {
+        if (!(GTD_KEYS as readonly string[]).includes(label)) set.add(label);
+      }
+    }
+    return Array.from(set).sort();
+  }, [results]);
+
+  // ラベル絞り込み後の結果
+  const filteredResults = useMemo(() => {
+    if (selectedLabels.length === 0) return results;
+    return results.filter(({ task }) =>
+      selectedLabels.every(label => task.labels.includes(label))
+    );
+  }, [results, selectedLabels]);
+
+  function toggleLabel(label: string) {
+    setSelectedLabels(prev =>
+      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  }
+
   // カテゴリ別にグルーピング
-  const grouped = new Map<string, typeof results>();
-  for (const result of results) {
+  const grouped = new Map<string, typeof filteredResults>();
+  for (const result of filteredResults) {
     const cat = result.task.gtdCategory;
     if (!grouped.has(cat)) grouped.set(cat, []);
     grouped.get(cat)!.push(result);
@@ -103,13 +131,35 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
   return (
     <div className="list-page">
       <div className="page-header">
-        <h2>検索</h2>
+        <h2>🔍 検索</h2>
         {query && !loading && (
-          <span className="gtd-tip">{results.length} 件</span>
+          <span className="gtd-tip">
+            {filteredResults.length}{filteredResults.length !== results.length ? `/${results.length}` : ''} 件
+          </span>
         )}
       </div>
 
-      <AddTaskForm onAdd={handleAdd} />
+      {/* 検索フォーム */}
+      <div className="search-form">
+        <input
+          ref={inputRef}
+          type="search"
+          className="search-input"
+          placeholder="キーワードを入力..."
+          value={query}
+          autoFocus
+          onChange={(e) => setQuery(e.target.value)}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={(e) => {
+            setIsComposing(false);
+            setQuery(e.currentTarget.value);
+          }}
+        />
+      </div>
+
+      <div className="add-task-row">
+        <AddTaskForm onAdd={handleAdd} />
+      </div>
 
       {/* 本文検索トグル */}
       <label className="search-body-toggle">
@@ -120,6 +170,21 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
         />
         本文も検索する
       </label>
+
+      {/* ラベル絞り込み */}
+      {availableLabels.length > 0 && (
+        <div className="label-filter">
+          {availableLabels.map(label => (
+            <button
+              key={label}
+              className={`label-filter-btn${selectedLabels.includes(label) ? ' active' : ''}`}
+              onClick={() => toggleLabel(label)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="search-error-banner">
