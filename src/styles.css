@@ -278,8 +278,16 @@ th.th-sorted { color: var(--accent); }
 
 .page-header h2 { margin: 0; }
 
-.btn-refresh {
+.page-header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-only { display: none; }
+
+.page-header-actions .btn {
   font-size: 16px;
   padding: 2px 8px;
   line-height: 1;
@@ -304,6 +312,13 @@ th.th-sorted { color: var(--accent); }
 @media (max-width: 640px) {
   /* グリッド行がコンテンツ不足時に伸長しないようにする */
   .app { align-content: start; }
+
+  /* モバイル専用ボタン表示 */
+  .mobile-only { display: flex; }
+
+  /* add-task-row: モバイルでは + ボタンで開いたときだけ表示 */
+  .add-task-row { display: none; }
+  .add-task-row.open { display: flex; }
 
   /* ページヘッダー: h2+badge を1行目、tip を2行目にティッカー表示 */
   .page-header { flex-wrap: wrap; gap: 4px 10px; }
@@ -505,6 +520,8 @@ th.th-sorted { color: var(--accent); }
     align-items: center;
     justify-content: center;
     padding: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .swipe-btn-done:active { background: #a01820; }
@@ -522,6 +539,8 @@ th.th-sorted { color: var(--accent); }
     align-items: center;
     justify-content: center;
     padding: 0;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .swipe-btn-move:active { background: #0758b8; }

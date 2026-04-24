@@ -15,9 +15,9 @@ interface Props {
 
 export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Props) {
   const [moveTarget, setMoveTarget] = useState('');
-  const [busy, setBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
@@ -26,32 +26,36 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
   const isOverdue = task.due != null && task.due < today;
 
   async function handleSwipeDone() {
-    // スワイプ完了は確認なし
-    setBusy(true);
+    reset();
+    setHidden(true);
     try {
       await onDone(task.number);
     } catch (err: unknown) {
+      setHidden(false);
       alert(err instanceof Error ? err.message : '完了処理に失敗しました');
-      reset();
-    } finally {
-      setBusy(false);
     }
   }
 
   async function handleMove() {
     if (!moveTarget) return;
-    setBusy(true);
+    setHidden(true);
     try {
       await onMove(task.number, moveTarget);
-      setMoveTarget('');
-    } finally {
-      setBusy(false);
+    } catch (err: unknown) {
+      setHidden(false);
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
     }
   }
 
   async function handleSwipeMove(targetGtd: string) {
-    await onMove(task.number, targetGtd);
-    reset();
+    setHidden(true);
+    setShowMoveDialog(false);
+    try {
+      await onMove(task.number, targetGtd);
+    } catch (err: unknown) {
+      setHidden(false);
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
+    }
   }
 
   function handleTitleClick() {
@@ -65,6 +69,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
       <tr
         ref={containerRef as React.RefObject<HTMLTableRowElement>}
         className={task.priority ? `pri-${task.priority}` : undefined}
+        style={hidden ? { display: 'none' } : undefined}
         {...handlers}
       >
         <td>
@@ -91,7 +96,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
             <button
               className="btn"
               onClick={() => setEditOpen((prev) => !prev)}
-              disabled={busy}
               title="編集"
             >
               ✏️
@@ -99,7 +103,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
             <button
               className="btn"
               onClick={() => onDetail(task.number)}
-              disabled={busy}
               title="詳細を表示"
             >
               詳細
@@ -108,10 +111,12 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
               className="btn btn-danger"
               onClick={async () => {
                 if (!window.confirm(`#${task.number} を完了しますか？`)) return;
-                setBusy(true);
-                try { await onDone(task.number); } finally { setBusy(false); }
+                setHidden(true);
+                try { await onDone(task.number); } catch (err: unknown) {
+                  setHidden(false);
+                  alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+                }
               }}
-              disabled={busy}
               title="完了（Issue クローズ）"
             >
               完了
@@ -120,7 +125,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
               <select
                 value={moveTarget}
                 onChange={(e) => setMoveTarget(e.target.value)}
-                disabled={busy}
               >
                 <option value="">移動先...</option>
                 {MOVABLE_GTD_KEYS
@@ -132,7 +136,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
               <button
                 className="btn"
                 onClick={handleMove}
-                disabled={busy || !moveTarget}
+                disabled={!moveTarget}
               >
                 移動
               </button>
@@ -160,9 +164,18 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
           <div
             className="swipe-action-portal"
             style={{ top: rect.top, height: rect.height }}
+            onTouchStart={(e) => e.stopPropagation()}
           >
-            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
-            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+            <button
+              className="swipe-btn-done"
+              onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleSwipeDone(); }}
+              onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }}
+            >完了</button>
+            <button
+              className="swipe-btn-move"
+              onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setShowMoveDialog(true); }}
+              onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }}
+            >移動</button>
           </div>,
           document.body
         );
