@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 import EditForm from './EditForm';
+import MoveDialog from './MoveDialog';
+import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
 interface Props {
   parent: Task;
@@ -20,21 +22,27 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
   const [busy, setBusy] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+
+  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = parent.due != null && parent.due < today;
   const hasChildren = children.length > 0;
 
-  async function handleDone() {
+  async function handleSwipeDone() {
     if (hasChildren) {
-      // 子タスクがある場合はモーダルで3択確認
+      // 子タスクがある場合はモーダルで3択確認（スワイプでも同様）
       setShowConfirm(true);
       return;
     }
-    // 子タスクなし → 従来通り即完了
+    // 子タスクなし → 確認なしで即完了
     setBusy(true);
     try {
       await onDone(parent.number);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+      reset();
     } finally {
       setBusy(false);
     }
@@ -42,16 +50,17 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
 
   async function handleConfirmChoice(choice: ConfirmDialogChoice) {
     setShowConfirm(false);
-    if (choice === 'cancel') return;
+    if (choice === 'cancel') {
+      reset();
+      return;
+    }
 
     setBusy(true);
     try {
       if (choice === 'withChildren') {
-        // サーバー側で子→親の順にクローズ。完了後はリスト再フェッチのみ
         try {
           await api.doneTask(parent.number, { withChildren: true });
         } catch (err: unknown) {
-          // 部分成功（子はclose済み・親はopenのまま）の場合に詳細を表示
           const e = err as Record<string, unknown>;
           if (e && e.parentStillOpen === true) {
             const closed = Array.isArray(e.closedChildren) ? e.closedChildren.join(', #') : '';
@@ -67,11 +76,12 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         }
         await onRefresh();
       } else {
-        // parentOnly: 親だけ閉じる（従来の onDone を再利用）
+        // parentOnly
         await onDone(parent.number);
       }
     } finally {
       setBusy(false);
+      reset();
     }
   }
 
@@ -86,10 +96,24 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
     }
   }
 
+  async function handleSwipeMove(targetGtd: string) {
+    await onMove(parent.number, targetGtd);
+    reset();
+  }
+
+  function handleTitleClick() {
+    if (isOpen) return;
+    onDetail(parent.number);
+  }
+
   return (
     <>
       {/* 親 project 行 */}
-      <tr className="project-parent-row">
+      <tr
+        ref={containerRef as React.RefObject<HTMLTableRowElement>}
+        className={`project-parent-row${parent.priority ? ` pri-${parent.priority}` : ''}`}
+        {...handlers}
+      >
         <td>
           <span className="issue-num">#{parent.number}</span>
         </td>
@@ -98,7 +122,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
             {hasChildren ? (
               <button
                 className="expand-btn"
-                onClick={() => setExpanded((prev) => !prev)}
+                onClick={(e) => { e.stopPropagation(); setExpanded((prev) => !prev); }}
                 title={expanded ? '折りたたむ' : '展開する'}
                 aria-expanded={expanded}
               >
@@ -108,13 +132,14 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
               <span className="expand-btn-placeholder" />
             )}
             <span
-              onClick={editOpen ? () => setEditOpen(false) : undefined}
-              style={editOpen ? { cursor: 'pointer' } : undefined}
+              onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
+              style={{ cursor: 'pointer', flex: 1 }}
             >{parent.title}</span>
             {hasChildren && (
               <span className="child-count-badge">{children.length}件</span>
             )}
           </div>
+
         </td>
         <td>
           {parent.priority && (
@@ -127,6 +152,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           )}
         </td>
         <td>
+          {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
             <button
               className="btn"
@@ -146,7 +172,12 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
             </button>
             <button
               className="btn btn-danger"
-              onClick={handleDone}
+              onClick={() => {
+                if (hasChildren) { setShowConfirm(true); return; }
+                if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
+                setBusy(true);
+                onDone(parent.number).finally(() => setBusy(false));
+              }}
               disabled={busy}
               title="完了（Issue クローズ）"
             >
@@ -201,13 +232,36 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         />
       ))}
 
-      {/* 完了確認ダイアログ（Portal 経由で body 直下にマウント） */}
+      {/* 完了確認ダイアログ */}
       {showConfirm && createPortal(
         <ConfirmDialog
           projectNumber={parent.number}
           projectTitle={parent.title}
           childCount={children.length}
           onChoice={handleConfirmChoice}
+        />,
+        document.body
+      )}
+
+      {/* スワイプ完了後: fixed でボタンを表示 */}
+      {isOpen && (() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return null;
+        return createPortal(
+          <div className="swipe-action-portal" style={{ top: rect.top, height: rect.height }}>
+            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
+            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {showMoveDialog && createPortal(
+        <MoveDialog
+          taskNumber={parent.number}
+          currentGtd={parent.gtdCategory}
+          onMove={handleSwipeMove}
+          onClose={() => { setShowMoveDialog(false); reset(); }}
         />,
         document.body
       )}
@@ -232,15 +286,21 @@ function ChildTaskRow({
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+
+  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = task.due != null && task.due < today;
 
-  async function handleDone() {
-    if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+  async function handleSwipeDone() {
+    // スワイプ完了は確認なし
     setBusy(true);
     try {
       await onDone(task.number);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+      reset();
     } finally {
       setBusy(false);
     }
@@ -257,22 +317,37 @@ function ChildTaskRow({
     }
   }
 
+  async function handleSwipeMove(targetGtd: string) {
+    await onMove(task.number, targetGtd);
+    reset();
+  }
+
+  function handleTitleClick() {
+    if (isOpen) return;
+    onDetail(task.number);
+  }
+
   return (
     <>
-      <tr className="project-child-row">
+      <tr
+        ref={containerRef as React.RefObject<HTMLTableRowElement>}
+        className={`project-child-row${task.priority ? ` pri-${task.priority}` : ''}`}
+        {...handlers}
+      >
         <td>
           <span className="issue-num">#{task.number}</span>
         </td>
         <td>
           <div className="child-title-cell">
             <span
-              onClick={editOpen ? () => setEditOpen(false) : undefined}
-              style={editOpen ? { cursor: 'pointer' } : undefined}
+              onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
+              style={{ cursor: 'pointer' }}
             >{task.title}</span>
             <span className={`badge gtd-${task.gtdCategory} gtd-badge-small`}>
               {GTD_DISPLAY[task.gtdCategory as keyof typeof GTD_DISPLAY] ?? task.gtdCategory}
             </span>
           </div>
+
         </td>
         <td>
           {task.priority && (
@@ -285,6 +360,7 @@ function ChildTaskRow({
           )}
         </td>
         <td>
+          {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
             <button
               className="btn"
@@ -304,7 +380,11 @@ function ChildTaskRow({
             </button>
             <button
               className="btn btn-danger"
-              onClick={handleDone}
+              onClick={async () => {
+                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+                setBusy(true);
+                try { await onDone(task.number); } finally { setBusy(false); }
+              }}
               disabled={busy}
               title="完了（Issue クローズ）"
             >
@@ -344,6 +424,29 @@ function ChildTaskRow({
             />
           </td>
         </tr>
+      )}
+
+      {/* スワイプ完了後: fixed でボタンを表示 */}
+      {isOpen && (() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return null;
+        return createPortal(
+          <div className="swipe-action-portal" style={{ top: rect.top, height: rect.height }}>
+            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
+            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {showMoveDialog && createPortal(
+        <MoveDialog
+          taskNumber={task.number}
+          currentGtd={task.gtdCategory}
+          onMove={handleSwipeMove}
+          onClose={() => { setShowMoveDialog(false); reset(); }}
+        />,
+        document.body
       )}
     </>
   );

@@ -13,6 +13,8 @@
 
 * { box-sizing: border-box; }
 
+html, body { overflow-x: hidden; max-width: 100%; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -295,6 +297,186 @@ th.th-sorted { color: var(--accent); }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+/* ===== モバイル対応 (640px以下) ===== */
+@media (max-width: 640px) {
+  /* サイドバーを横スクロールナビに */
+  .sidebar {
+    padding: 6px 8px;
+  }
+  .sidebar h1 { display: none; }
+  .sidebar nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .sidebar nav::-webkit-scrollbar { display: none; }
+  .sidebar nav a {
+    flex-shrink: 0;
+    margin-bottom: 0;
+    padding: 5px 10px;
+    font-size: 13px;
+  }
+
+  /* メインエリアのパディング縮小 */
+  .main { padding: 12px 14px; }
+
+  /* 追加フォームのinput幅を解放 */
+  .add-task-row { flex-wrap: wrap; }
+  .add-task-form { width: 100%; flex-wrap: wrap; }
+  .add-task-form input[type="text"] { width: 100%; max-width: none; }
+
+  /* テーブルをカード型に変換 */
+  table {
+    display: block;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+  }
+  thead { display: none; }
+  tbody { display: flex; flex-direction: column; gap: 8px; }
+
+  tbody tr:not(.edit-form-row-tr) {
+    display: grid;
+    grid-template-areas:
+      "title title"
+      "pri   due"
+      "actions actions";
+    grid-template-columns: auto 1fr;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    padding: 10px 12px;
+    gap: 4px 8px;
+  }
+  tbody tr:not(.edit-form-row-tr):hover { background: var(--card); }
+  tbody tr:not(.edit-form-row-tr) td {
+    border: none;
+    padding: 0;
+    background: transparent !important;
+  }
+  /* ストライプ無効化 */
+  tbody tr:nth-child(even) td { background: transparent !important; }
+
+  /* 優先度バッジを非表示にして左ボーダーで表現 */
+  td:nth-child(3) { display: none; }
+  tbody tr.pri-p1:not(.edit-form-row-tr) { border-left: 4px solid var(--danger); }
+  tbody tr.pri-p2:not(.edit-form-row-tr) { border-left: 4px solid #d4a017; }
+  tbody tr.pri-p3:not(.edit-form-row-tr) { border-left: 4px solid var(--accent); }
+
+  /* 各列のgrid配置 */
+  td:first-child  { display: none; }              /* # 非表示 */
+  td:nth-child(2) {
+    grid-area: title;
+    font-weight: 500;
+    min-width: 0;
+  }
+  /* タイトルテキストのみ省略（overflow は tr の hidden に任せる） */
+  td:nth-child(2) .title-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  td:nth-child(3) { grid-area: pri; }             /* 優先度 */
+  td:nth-child(4) { grid-area: due; text-align: right; } /* 期日 */
+  td:last-child   {
+    grid-area: actions;
+    padding-top: 6px !important;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+  }
+
+  /* 編集フォーム行 */
+  .edit-form-row-tr { display: block; }
+  .edit-form-row-tr td {
+    display: block !important;
+    border-radius: 8px;
+    padding: 0 !important;
+  }
+
+  /* 操作ボタン */
+  .btn { padding: 6px 10px; }
+  .task-actions { flex-wrap: wrap; gap: 6px; }
+  .move-group select { font-size: 12px; max-width: 120px; }
+
+  /* プロジェクトツリーの子タスクインデント縮小 */
+  .child-title-cell { margin-left: 12px; padding-left: 10px; }
+
+  /* ===== スワイプアクション ===== */
+
+  /* モバイルでは操作列（td:last-child）を非表示 */
+  tbody tr:not(.edit-form-row-tr) td:last-child {
+    display: none !important;
+  }
+
+  /* スワイプ可能なカードに overflow: hidden と相対位置を付与 */
+  tbody tr:not(.edit-form-row-tr) {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* カード本体：スワイプで左にスライドする要素（grid 内の全 td を包む） */
+  /* tr を直接 transform するため、tr に transition を付与 */
+  tbody tr:not(.edit-form-row-tr).swipe-sliding {
+    /* transition はタッチ中は不要。touchend 後に付与する */
+  }
+
+  /* タイトルセル（td:nth-child(2)）をタップ可能に */
+  tbody tr:not(.edit-form-row-tr) td:nth-child(2) {
+    cursor: pointer;
+  }
+
+  /* スワイプアクションボタン（position:fixed でポータル表示） */
+  .swipe-action-portal {
+    position: fixed;
+    right: 0;
+    width: 160px;
+    display: flex;
+    z-index: 200;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.15);
+    border-radius: 8px 0 0 8px;
+    overflow: hidden;
+  }
+
+  /* 完了ボタン（赤） */
+  .swipe-btn-done {
+    flex: 1;
+    border: none;
+    background: var(--danger);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .swipe-btn-done:active { background: #a01820; }
+
+  /* 移動ボタン（青） */
+  .swipe-btn-move {
+    flex: 1;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .swipe-btn-move:active { background: #0758b8; }
 }
 
 /* ===== Project ツリー表示 ===== */

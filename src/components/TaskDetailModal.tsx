@@ -5,6 +5,8 @@ import { api, type TaskDetail } from '../lib/api';
 interface Props {
   taskNumber: number;
   onClose: () => void;
+  /** 「編集」ボタン押下時のコールバック。渡された場合のみ「編集」ボタンを表示する */
+  onEdit?: () => void;
 }
 
 function formatJST(isoString: string | null): string {
@@ -19,7 +21,7 @@ function formatJST(isoString: string | null): string {
   }).format(new Date(isoString));
 }
 
-export default function TaskDetailModal({ taskNumber, onClose }: Props) {
+export default function TaskDetailModal({ taskNumber, onClose, onEdit }: Props) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +163,14 @@ export default function TaskDetailModal({ taskNumber, onClose }: Props) {
             </div>
 
             <div className="modal-actions" style={{ marginTop: 16 }}>
+              {onEdit && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => { onClose(); onEdit(); }}
+                >
+                  編集
+                </button>
+              )}
               <button className="btn btn-ghost" onClick={onClose}>閉じる</button>
             </div>
           </>

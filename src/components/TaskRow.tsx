@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
 import EditForm from './EditForm';
+import MoveDialog from './MoveDialog';
+import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
 interface Props {
   task: Task;
@@ -14,16 +17,22 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
+
+  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
   // due の色分け（今日以前 = 期限切れ）
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = task.due != null && task.due < today;
 
-  async function handleDone() {
-    if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+  async function handleSwipeDone() {
+    // スワイプ完了は確認なし
     setBusy(true);
     try {
       await onDone(task.number);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+      reset();
     } finally {
       setBusy(false);
     }
@@ -40,16 +49,32 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
     }
   }
 
+  async function handleSwipeMove(targetGtd: string) {
+    await onMove(task.number, targetGtd);
+    reset();
+  }
+
+  function handleTitleClick() {
+    // スワイプが開いているときはタップを無視
+    if (isOpen) return;
+    onDetail(task.number);
+  }
+
   return (
     <>
-      <tr>
+      <tr
+        ref={containerRef as React.RefObject<HTMLTableRowElement>}
+        className={task.priority ? `pri-${task.priority}` : undefined}
+        {...handlers}
+      >
         <td>
           <span className="issue-num">#{task.number}</span>
         </td>
         <td
-          onClick={editOpen ? () => setEditOpen(false) : undefined}
-          style={editOpen ? { cursor: 'pointer' } : undefined}
-        >{task.title}</td>
+          onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
+        >
+          <span className="title-text" style={{ cursor: 'pointer' }}>{task.title}</span>
+        </td>
         <td>
           {task.priority && (
             <span className={`badge pri-${task.priority}`}>{task.priority}</span>
@@ -61,6 +86,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
           )}
         </td>
         <td>
+          {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
             <button
               className="btn"
@@ -80,7 +106,11 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
             </button>
             <button
               className="btn btn-danger"
-              onClick={handleDone}
+              onClick={async () => {
+                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+                setBusy(true);
+                try { await onDone(task.number); } finally { setBusy(false); }
+              }}
               disabled={busy}
               title="完了（Issue クローズ）"
             >
@@ -120,6 +150,32 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
             />
           </td>
         </tr>
+      )}
+
+      {/* スワイプ完了後: fixed でボタンを表示 */}
+      {isOpen && (() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return null;
+        return createPortal(
+          <div
+            className="swipe-action-portal"
+            style={{ top: rect.top, height: rect.height }}
+          >
+            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
+            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {showMoveDialog && createPortal(
+        <MoveDialog
+          taskNumber={task.number}
+          currentGtd={task.gtdCategory}
+          onMove={handleSwipeMove}
+          onClose={() => { setShowMoveDialog(false); reset(); }}
+        />,
+        document.body
       )}
     </>
   );
