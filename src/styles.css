@@ -262,6 +262,13 @@ tr:hover td { background: #f6f8fa; }
 
 .page-header h2 { margin: 0; }
 
+.btn-refresh {
+  margin-left: auto; /* page-header 右端に寄せる */
+  font-size: 16px;
+  padding: 2px 8px;
+  line-height: 1;
+}
+
 .gtd-tip {
   font-size: 12px;
   color: var(--muted);

@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import CategoryNav from './components/CategoryNav';
 import List from './pages/List';
-import { GTD_KEYS, type GtdKey } from './lib/api';
+import { GTD_KEYS, type GtdKey, type TaskListResponse } from './lib/api';
+import { useTaskCache } from './lib/useTaskCache';
 
 const GTD_KEY_SET = new Set<string>(GTD_KEYS);
 
@@ -13,19 +14,34 @@ function isGtdKey(v: string | undefined): v is GtdKey {
 function ListRoute({
   byCategory,
   onCategoryChange,
+  getCache,
+  setCache,
+  invalidateCache,
 }: {
   byCategory: Record<string, number>;
   onCategoryChange: (bc: Record<string, number>) => void;
+  getCache: (gtd: GtdKey) => TaskListResponse | null;
+  setCache: (gtd: GtdKey, data: TaskListResponse) => void;
+  invalidateCache: (gtd?: GtdKey) => void;
 }) {
   const { gtd } = useParams<{ gtd: string }>();
   if (!isGtdKey(gtd)) {
     return <Navigate to="/list/inbox" replace />;
   }
-  return <List gtd={gtd} onCategoryChange={onCategoryChange} />;
+  return (
+    <List
+      gtd={gtd}
+      onCategoryChange={onCategoryChange}
+      getCache={getCache}
+      setCache={setCache}
+      invalidateCache={invalidateCache}
+    />
+  );
 }
 
 export default function App() {
   const [byCategory, setByCategory] = useState<Record<string, number>>({});
+  const { getCache, setCache, invalidateCache } = useTaskCache();
 
   const handleCategoryChange = useCallback((bc: Record<string, number>) => {
     setByCategory(bc);
@@ -43,6 +59,9 @@ export default function App() {
               <ListRoute
                 byCategory={byCategory}
                 onCategoryChange={handleCategoryChange}
+                getCache={getCache}
+                setCache={setCache}
+                invalidateCache={invalidateCache}
               />
             }
           />

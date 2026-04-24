@@ -9,6 +9,9 @@ import TaskDetailModal from '../components/TaskDetailModal';
 interface Props {
   gtd: GtdKey;
   onCategoryChange: (byCategory: Record<string, number>) => void;
+  getCache: (gtd: GtdKey) => TaskListResponse | null;
+  setCache: (gtd: GtdKey, data: TaskListResponse) => void;
+  invalidateCache: (gtd?: GtdKey) => void;
 }
 
 // GTD カテゴリの並び順（子タスクのソートに使用）
@@ -44,7 +47,7 @@ function buildProjectTree(
   });
 }
 
-export default function List({ gtd, onCategoryChange }: Props) {
+export default function List({ gtd, onCategoryChange, getCache, setCache, invalidateCache }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [childTasks, setChildTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,10 +55,21 @@ export default function List({ gtd, onCategoryChange }: Props) {
   const [detailNumber, setDetailNumber] = useState<number | null>(null);
 
   const fetchTasks = useCallback(async () => {
+    // キャッシュヒット確認
+    const cached = getCache(gtd);
+    if (cached !== null) {
+      setTasks(cached.tasks);
+      setChildTasks(cached.childTasks ?? []);
+      onCategoryChange(cached.byCategory);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const result: TaskListResponse = await api.listTasks(gtd);
+      setCache(gtd, result);
       setTasks(result.tasks);
       setChildTasks(result.childTasks ?? []);
       onCategoryChange(result.byCategory);
@@ -64,7 +78,7 @@ export default function List({ gtd, onCategoryChange }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [gtd, onCategoryChange]);
+  }, [gtd, onCategoryChange, getCache, setCache]);
 
   useEffect(() => {
     fetchTasks();
@@ -72,20 +86,26 @@ export default function List({ gtd, onCategoryChange }: Props) {
 
   async function handleAdd(title: string, gtdCategory: string) {
     await api.addTask({ title, gtdCategory });
+    invalidateCache(gtdCategory as GtdKey); // 追加先カテゴリ
+    invalidateCache(gtd);                   // 現在の表示カテゴリ（同じでも無害）
     await fetchTasks();
   }
 
   async function handleDone(number: number) {
     await api.doneTask(number);
+    invalidateCache(gtd); // 現在のカテゴリ
     await fetchTasks();
   }
 
   async function handleMove(number: number, targetGtd: string) {
     await api.moveTask(number, targetGtd);
+    invalidateCache(gtd);                 // 移動元（現在のカテゴリ）
+    invalidateCache(targetGtd as GtdKey); // 移動先
     await fetchTasks();
   }
 
   async function handleRefresh() {
+    invalidateCache(gtd);
     await fetchTasks();
   }
 
@@ -110,6 +130,15 @@ export default function List({ gtd, onCategoryChange }: Props) {
           </span>
         )}
         {tip && <span className="gtd-tip">{tip}</span>}
+        <button
+          className="btn btn-refresh"
+          onClick={handleRefresh}
+          disabled={loading}
+          aria-label="リストを更新"
+          title="リストを更新"
+        >
+          ↻
+        </button>
       </div>
 
       <AddTaskForm currentGtd={gtd} onAdd={handleAdd} />
