@@ -14,21 +14,14 @@ interface Props {
   invalidateCache: (gtd?: GtdKey) => void;
 }
 
-// GTD カテゴリの並び順（子タスクのソートに使用）
+type SortKey = 'number' | 'title' | 'priority' | 'due';
+
 const GTD_ORDER: Record<string, number> = {
-  inbox: 0,
-  next: 1,
-  waiting: 2,
-  someday: 3,
-  routine: 4,
+  inbox: 0, next: 1, waiting: 2, someday: 3, routine: 4,
 };
 
-/**
- * project カテゴリ用ツリーデータを構築する
- * @param projectTasks - project ラベルの Issue（親）
- * @param childTasks   - parentProject を持つ Issue（子）
- * @returns 各親と紐づく子タスクリスト
- */
+const PRIORITY_ORDER: Record<string, number> = { p1: 1, p2: 2, p3: 3 };
+
 function buildProjectTree(
   projectTasks: Task[],
   childTasks: Task[]
@@ -40,10 +33,33 @@ function buildProjectTree(
         const orderA = GTD_ORDER[a.gtdCategory] ?? 99;
         const orderB = GTD_ORDER[b.gtdCategory] ?? 99;
         if (orderA !== orderB) return orderA - orderB;
-        // 同カテゴリは番号降順
         return b.number - a.number;
       });
     return { parent, children };
+  });
+}
+
+function sortTasks(tasks: Task[], key: SortKey, dir: 'asc' | 'desc'): Task[] {
+  return [...tasks].sort((a, b) => {
+    let cmp = 0;
+    switch (key) {
+      case 'number':
+        cmp = a.number - b.number;
+        break;
+      case 'title':
+        cmp = a.title.localeCompare(b.title, 'ja');
+        break;
+      case 'priority':
+        cmp = (PRIORITY_ORDER[a.priority ?? ''] ?? 99) - (PRIORITY_ORDER[b.priority ?? ''] ?? 99);
+        break;
+      case 'due': {
+        const da = a.due ?? '9999-99-99';
+        const db = b.due ?? '9999-99-99';
+        cmp = da < db ? -1 : da > db ? 1 : 0;
+        break;
+      }
+    }
+    return dir === 'asc' ? cmp : -cmp;
   });
 }
 
@@ -53,9 +69,10 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailNumber, setDetailNumber] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const fetchTasks = useCallback(async () => {
-    // キャッシュヒット確認
     const cached = getCache(gtd);
     if (cached !== null) {
       setTasks(cached.tasks);
@@ -64,7 +81,6 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
@@ -84,23 +100,37 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
     fetchTasks();
   }, [fetchTasks]);
 
+  // カテゴリ切り替え時はソートをリセット
+  useEffect(() => {
+    setSortKey(null);
+  }, [gtd]);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
   async function handleAdd(title: string, gtdCategory: string) {
     await api.addTask({ title, gtdCategory });
-    invalidateCache(gtdCategory as GtdKey); // 追加先カテゴリ
-    invalidateCache(gtd);                   // 現在の表示カテゴリ（同じでも無害）
+    invalidateCache(gtdCategory as GtdKey);
+    invalidateCache(gtd);
     await fetchTasks();
   }
 
   async function handleDone(number: number) {
     await api.doneTask(number);
-    invalidateCache(gtd); // 現在のカテゴリ
+    invalidateCache(gtd);
     await fetchTasks();
   }
 
   async function handleMove(number: number, targetGtd: string) {
     await api.moveTask(number, targetGtd);
-    invalidateCache(gtd);                 // 移動元（現在のカテゴリ）
-    invalidateCache(targetGtd as GtdKey); // 移動先
+    invalidateCache(gtd);
+    invalidateCache(targetGtd as GtdKey);
     await fetchTasks();
   }
 
@@ -117,8 +147,25 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   const isProjectView = gtd === 'project';
   const tip = useMemo(() => getRandomTip(gtd), [gtd]);
 
-  // ツリーデータ（project カテゴリのみ）
-  const projectTree = isProjectView ? buildProjectTree(tasks, childTasks) : [];
+  const displayTasks = useMemo(
+    () => sortKey ? sortTasks(tasks, sortKey, sortDir) : tasks,
+    [tasks, sortKey, sortDir]
+  );
+
+  const projectTree = isProjectView ? buildProjectTree(displayTasks, childTasks) : [];
+
+  function thProps(key: SortKey) {
+    const active = sortKey === key;
+    return {
+      className: `th-sortable${active ? ' th-sorted' : ''}`,
+      onClick: () => handleSort(key),
+    };
+  }
+
+  function sortIcon(key: SortKey) {
+    if (sortKey !== key) return null;
+    return <span className="sort-icon">{sortDir === 'asc' ? '▲' : '▼'}</span>;
+  }
 
   return (
     <div>
@@ -136,9 +183,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           disabled={loading}
           aria-label="リストを更新"
           title="リストを更新"
-        >
-          ↻
-        </button>
+        >↻</button>
       </div>
 
       <AddTaskForm onAdd={handleAdd} />
@@ -158,10 +203,10 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <table>
           <thead>
             <tr>
-              <th style={{ width: 60 }}>#</th>
-              <th>タイトル</th>
-              <th style={{ width: 60 }}>優先度</th>
-              <th style={{ width: 100 }}>期日</th>
+              <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+              <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
+              <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
+              <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
               <th style={{ width: 280 }}>操作</th>
             </tr>
           </thead>
@@ -181,20 +226,20 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         </table>
       )}
 
-      {/* その他カテゴリ: 従来のフラット表示 */}
+      {/* その他カテゴリ: フラット表示 */}
       {!loading && !error && !isProjectView && tasks.length > 0 && (
         <table>
           <thead>
             <tr>
-              <th style={{ width: 60 }}>#</th>
-              <th>タイトル</th>
-              <th style={{ width: 60 }}>優先度</th>
-              <th style={{ width: 100 }}>期日</th>
+              <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+              <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
+              <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
+              <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
               <th style={{ width: 280 }}>操作</th>
             </tr>
           </thead>
           <tbody>
-            {tasks.map((task) => (
+            {displayTasks.map((task) => (
               <TaskRow
                 key={task.number}
                 task={task}
@@ -207,6 +252,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           </tbody>
         </table>
       )}
+
       {detailNumber !== null && (
         <TaskDetailModal
           taskNumber={detailNumber}

@@ -143,6 +143,11 @@ th { background: var(--bg); font-weight: 600; font-size: 13px; color: var(--mute
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f6f8fa; }
 
+th.th-sortable { cursor: pointer; user-select: none; }
+th.th-sortable:hover { color: var(--fg); background: #eaedf0; }
+th.th-sorted { color: var(--accent); }
+.sort-icon { font-size: 10px; margin-left: 2px; }
+
 /* バッジ */
 .badge {
   display: inline-block;
@@ -265,7 +270,7 @@ tr:hover td { background: #f6f8fa; }
 .page-header h2 { margin: 0; }
 
 .btn-refresh {
-  margin-left: auto; /* page-header 右端に寄せる */
+  margin-left: auto;
   font-size: 16px;
   padding: 2px 8px;
   line-height: 1;
