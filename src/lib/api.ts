@@ -1,0 +1,100 @@
+// API クライアント（fetch ラッパー）
+
+export interface Task {
+  number: number;
+  title: string;
+  gtdCategory: string; // 'inbox' | 'next' | 'waiting' | 'someday' | 'routine' | 'project' | 'reference'
+  labels: string[];
+  body: string;
+  due: string | null;
+  priority: string | null; // 'p1' | 'p2' | 'p3' | null
+}
+
+export interface TaskListResponse {
+  tasks: Task[];
+  total: number;
+  byCategory: Record<string, number>;
+}
+
+export interface AddTaskInput {
+  title: string;
+  gtdCategory?: string;
+}
+
+// 有効な GTD カテゴリ
+export const GTD_KEYS = ['inbox', 'next', 'waiting', 'someday', 'routine', 'project', 'reference'] as const;
+export type GtdKey = (typeof GTD_KEYS)[number];
+
+// UI 表示用ラベル（サイドバー等）
+export const GTD_DISPLAY: Record<GtdKey, string> = {
+  inbox:     '📥 Inbox',
+  next:      '🎯 Next',
+  waiting:   '⏳ Waiting',
+  someday:   '🌈 Someday',
+  routine:   '🔁 Routine',
+  project:   '📁 Project',
+  reference: '📎 Reference',
+};
+
+// move 先として選択可能なカテゴリ（project は除外）
+export const MOVABLE_GTD_KEYS: GtdKey[] = ['inbox', 'next', 'waiting', 'someday', 'routine', 'reference'];
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const body = await res.json();
+      detail = body.error || body.detail || '';
+    } catch {
+      detail = await res.text().catch(() => '');
+    }
+    throw new Error(`${res.status} ${res.statusText}${detail ? ': ' + detail : ''}`);
+  }
+  // 204 No Content
+  if (res.status === 204) return {} as T;
+  return res.json() as Promise<T>;
+}
+
+export const api = {
+  /**
+   * タスク一覧を取得する
+   * @param gtd - null で全カテゴリ、文字列で絞り込み
+   */
+  listTasks: (gtd: string | null): Promise<TaskListResponse> => {
+    const url = gtd ? `/api/tasks?gtd=${encodeURIComponent(gtd)}` : '/api/tasks';
+    return request<TaskListResponse>(url);
+  },
+
+  /**
+   * タスクを追加する
+   */
+  addTask: (input: AddTaskInput): Promise<{ number: number }> =>
+    request<{ number: number }>('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+
+  /**
+   * タスクを完了する
+   */
+  doneTask: (number: number): Promise<{ ok: boolean }> =>
+    request<{ ok: boolean }>(`/api/tasks/${number}/done`, { method: 'POST' }),
+
+  /**
+   * タスクの GTD カテゴリを変更する
+   */
+  moveTask: (number: number, targetGtd: string): Promise<{ ok: boolean }> =>
+    request<{ ok: boolean }>(`/api/tasks/${number}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetGtd }),
+    }),
+
+  /**
+   * ヘルスチェック
+   */
+  health: (): Promise<{ ok: boolean; owner: string; repo: string; uptime: number }> =>
+    request('/api/health'),
+};
