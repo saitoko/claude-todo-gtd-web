@@ -286,6 +286,7 @@ th.th-sorted { color: var(--accent); }
 }
 
 .mobile-only { display: none; }
+.swipe-action-portal { display: none; }
 
 .page-header-actions .btn {
   font-size: 16px;
