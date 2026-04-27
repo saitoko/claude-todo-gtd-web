@@ -4,9 +4,10 @@ import { MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
 interface Props {
   onAdd: (title: string, gtdCategory: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
+  onSearch?: () => void;
 }
 
-export default function AddTaskForm({ onAdd, onRefresh }: Props) {
+export default function AddTaskForm({ onAdd, onRefresh, onSearch }: Props) {
   const [title, setTitle] = useState('');
   const [gtdCategory, setGtdCategory] = useState('inbox');
   const [busy, setBusy] = useState(false);
@@ -59,6 +60,11 @@ export default function AddTaskForm({ onAdd, onRefresh }: Props) {
         {onRefresh && (
           <button type="button" className="btn btn-icon" onClick={onRefresh} disabled={busy} title="更新">
             🔄
+          </button>
+        )}
+        {onSearch && (
+          <button type="button" className="btn btn-icon" onClick={onSearch} style={{ marginLeft: 'auto' }} title="検索">
+            🔍
           </button>
         )}
       </div>

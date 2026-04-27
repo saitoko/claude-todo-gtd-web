@@ -111,7 +111,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         {...handlers}
       >
         <td>
-          <span className="issue-num">#{parent.number}</span>
+          <span className="issue-num">{parent.number}</span>
         </td>
         <td>
           <div className="project-title-cell">
@@ -298,7 +298,7 @@ function ChildTaskRow({
         {...handlers}
       >
         <td>
-          <span className="issue-num">#{task.number}</span>
+          <span className="issue-num">{task.number}</span>
         </td>
         <td>
           <div className="child-title-cell">

@@ -126,6 +126,7 @@ h2 {
   align-items: center;
   width: 420px; /* 優先度(80) + 期日(100) + 操作(240) */
   flex-shrink: 0;
+  padding-right: 13px; /* table右border(1px) + セル右padding(12px) に合わせる */
 }
 
 .add-task-form select {
@@ -246,6 +247,10 @@ th.th-sorted { color: var(--accent); }
   align-items: center;
   flex-wrap: nowrap;
   width: 100%;
+}
+
+.task-actions > .btn-icon {
+  margin-left: auto;
 }
 
 .move-group {

@@ -156,12 +156,6 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <div className="page-header-actions">
           <button
             className="btn mobile-only"
-            onClick={() => navigate('/search')}
-            aria-label="検索"
-            title="検索"
-          >🔍</button>
-          <button
-            className="btn mobile-only"
             onClick={() => setAddFormOpen(v => !v)}
             aria-label="タスクを追加"
             title="タスクを追加"
@@ -173,6 +167,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <AddTaskForm
           onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }}
           onRefresh={handleRefresh}
+          onSearch={() => navigate('/search')}
         />
       </div>
 

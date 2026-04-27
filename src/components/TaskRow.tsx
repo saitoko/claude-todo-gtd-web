@@ -68,7 +68,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
         {...handlers}
       >
         <td>
-          <span className="issue-num">#{task.number}</span>
+          <span className="issue-num">{task.number}</span>
         </td>
         <td onClick={handleTitleClick}>
           <span className="title-text" style={{ cursor: 'pointer' }}>{task.title}</span>
