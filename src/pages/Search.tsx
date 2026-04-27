@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api, GTD_DISPLAY, GTD_KEYS, type GtdKey, type TaskListResponse } from '../lib/api';
+import { api, GTD_DISPLAY, GTD_KEYS, type GtdKey, type Task, type TaskListResponse } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
 import AddTaskForm from '../components/AddTaskForm';
@@ -15,7 +15,7 @@ interface Props {
 
 export default function Search({ getCache, setCache, invalidateCache }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTaskNumber, setActiveTaskNumber] = useState<number | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -230,8 +230,7 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
                         task={task}
                         onDone={() => handleDone(task.number, task.gtdCategory)}
                         onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(num) => setActiveTaskNumber(num)}
-                        onEdit={() => handleEdit(task.gtdCategory)}
+                        onDetail={(t) => setActiveTask(t)}
                       />
                     ))}
                   </tbody>
@@ -242,10 +241,11 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
         </div>
       )}
 
-      {activeTaskNumber !== null && (
+      {activeTask !== null && (
         <TaskDetailModal
-          taskNumber={activeTaskNumber}
-          onClose={() => setActiveTaskNumber(null)}
+          task={activeTask}
+          onClose={() => setActiveTask(null)}
+          onSaved={() => { invalidateCache(); setRefreshKey(k => k + 1); }}
         />
       )}
     </div>
