@@ -99,15 +99,15 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
                   ))}
               </select>
               <button
-                className="btn"
+                className="btn btn-icon"
                 onClick={handleMove}
                 disabled={!moveTarget}
               >
-                移動
+                ➡️
               </button>
             </div>
             <button
-              className="btn btn-danger"
+              className="btn btn-icon"
               onClick={async () => {
                 if (!window.confirm(`#${task.number} を完了しますか？`)) return;
                 setHidden(true);
@@ -118,7 +118,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
               }}
               title="完了（Issue クローズ）"
             >
-              完了
+              ✅
             </button>
           </div>
         </td>
@@ -138,12 +138,12 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
               className="swipe-btn-done"
               onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleSwipeDone(); }}
               onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }}
-            >完了</button>
+            >✅</button>
             <button
               className="swipe-btn-move"
               onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setShowMoveDialog(true); }}
               onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }}
-            >移動</button>
+            >➡️</button>
           </div>,
           document.body
         );

@@ -164,15 +164,15 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
                   ))}
               </select>
               <button
-                className="btn"
+                className="btn btn-icon"
                 onClick={handleMove}
                 disabled={busy || !moveTarget}
               >
-                移動
+                ➡️
               </button>
             </div>
             <button
-              className="btn btn-danger"
+              className="btn btn-icon"
               onClick={() => {
                 if (hasChildren) { setShowConfirm(true); return; }
                 if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
@@ -182,7 +182,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
               disabled={busy}
               title="完了（Issue クローズ）"
             >
-              完了
+              ✅
             </button>
           </div>
         </td>
@@ -216,8 +216,8 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         if (!rect) return null;
         return createPortal(
           <div className="swipe-action-portal" style={{ top: rect.top, height: rect.height }}>
-            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
-            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>✅</button>
+            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>➡️</button>
           </div>,
           document.body
         );
@@ -339,15 +339,15 @@ function ChildTaskRow({
                   ))}
               </select>
               <button
-                className="btn"
+                className="btn btn-icon"
                 onClick={handleMove}
                 disabled={busy || !moveTarget}
               >
-                移動
+                ➡️
               </button>
             </div>
             <button
-              className="btn btn-danger"
+              className="btn btn-icon"
               onClick={async () => {
                 if (!window.confirm(`#${task.number} を完了しますか？`)) return;
                 setBusy(true);
@@ -356,7 +356,7 @@ function ChildTaskRow({
               disabled={busy}
               title="完了（Issue クローズ）"
             >
-              完了
+              ✅
             </button>
           </div>
         </td>
@@ -368,8 +368,8 @@ function ChildTaskRow({
         if (!rect) return null;
         return createPortal(
           <div className="swipe-action-portal" style={{ top: rect.top, height: rect.height }}>
-            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>完了</button>
-            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>移動</button>
+            <button className="swipe-btn-done" onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }} disabled={busy}>✅</button>
+            <button className="swipe-btn-move" onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }} disabled={busy}>➡️</button>
           </div>,
           document.body
         );

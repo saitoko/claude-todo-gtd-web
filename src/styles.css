@@ -202,6 +202,15 @@ th.th-sorted { color: var(--accent); }
 .btn:hover { background: var(--bg); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.btn-icon {
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  font-size: 18px;
+  line-height: 1;
+}
+.btn-icon:hover { background: transparent; opacity: 0.7; }
+
 .btn-primary {
   background: var(--accent);
   color: white;
