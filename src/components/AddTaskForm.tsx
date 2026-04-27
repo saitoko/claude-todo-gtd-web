@@ -3,9 +3,10 @@ import { MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
 
 interface Props {
   onAdd: (title: string, gtdCategory: string) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
-export default function AddTaskForm({ onAdd }: Props) {
+export default function AddTaskForm({ onAdd, onRefresh }: Props) {
   const [title, setTitle] = useState('');
   const [gtdCategory, setGtdCategory] = useState('inbox');
   const [busy, setBusy] = useState(false);
@@ -42,18 +43,25 @@ export default function AddTaskForm({ onAdd }: Props) {
         onChange={(e) => setTitle(e.target.value)}
         disabled={busy}
       />
-      <select
-        value={gtdCategory}
-        onChange={(e) => setGtdCategory(e.target.value)}
-        disabled={busy}
-      >
-        {MOVABLE_GTD_KEYS.map((k) => (
-          <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
-        ))}
-      </select>
-      <button type="submit" className="btn btn-primary" disabled={busy || !title.trim()}>
-        {busy ? '追加中...' : '追加'}
-      </button>
+      <div className="add-task-controls">
+        <select
+          value={gtdCategory}
+          onChange={(e) => setGtdCategory(e.target.value)}
+          disabled={busy}
+        >
+          {MOVABLE_GTD_KEYS.map((k) => (
+            <option key={k} value={k}>{GTD_DISPLAY[k]}</option>
+          ))}
+        </select>
+        <button type="submit" className="btn btn-icon" disabled={busy || !title.trim()} title="追加">
+          {busy ? '⏳' : '➕'}
+        </button>
+        {onRefresh && (
+          <button type="button" className="btn btn-icon" onClick={onRefresh} disabled={busy} title="更新">
+            🔄
+          </button>
+        )}
+      </div>
       {error && <span className="error" style={{ fontSize: 12 }}>{error}</span>}
     </form>
   );

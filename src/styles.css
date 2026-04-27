@@ -105,16 +105,27 @@ h2 {
 
 .add-task-form {
   display: flex;
+  flex: 1;
   gap: 8px;
   align-items: center;
+  padding-left: 72px; /* #列(60px) + padding(12px) に合わせる */
 }
 
 .add-task-form input[type="text"] {
-  width: 400px;
+  flex: 1;
+  min-width: 0;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
+}
+
+.add-task-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 420px; /* 優先度(80) + 期日(100) + 操作(240) */
+  flex-shrink: 0;
 }
 
 .add-task-form select {

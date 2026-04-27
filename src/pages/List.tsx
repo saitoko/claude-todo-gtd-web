@@ -152,6 +152,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
             {tasks.length}
           </span>
         )}
+        {tip && <span className="gtd-tip">{tip}</span>}
         <div className="page-header-actions">
           <button
             className="btn mobile-only"
@@ -165,19 +166,14 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
             aria-label="タスクを追加"
             title="タスクを追加"
           >✚</button>
-          <button
-            className="btn btn-refresh"
-            onClick={handleRefresh}
-            disabled={loading}
-            aria-label="リストを更新"
-            title="リストを更新"
-          >↻</button>
         </div>
-        {tip && <span className="gtd-tip">{tip}</span>}
       </div>
 
       <div className={`add-task-row${addFormOpen ? ' open' : ''}`}>
-        <AddTaskForm onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }} />
+        <AddTaskForm
+          onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }}
+          onRefresh={handleRefresh}
+        />
       </div>
 
       {loading && tasks.length === 0 && <div className="loading">読み込み中...</div>}
