@@ -231,6 +231,7 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
                         onDone={() => handleDone(task.number, task.gtdCategory)}
                         onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
                         onDetail={(t) => setActiveTask(t)}
+                        onSaved={() => { invalidateCache(task.gtdCategory as GtdKey); setRefreshKey(k => k + 1); }}
                       />
                     ))}
                   </tbody>

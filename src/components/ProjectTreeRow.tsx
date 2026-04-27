@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
+import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
@@ -21,6 +22,9 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
   const [busy, setBusy] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [editingPriority, setEditingPriority] = useState(false);
+  const [editingDue, setEditingDue] = useState(false);
+  const [dueInputValue, setDueInputValue] = useState(parent.due ?? '');
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
@@ -102,6 +106,38 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
     onDetail(parent);
   }
 
+  async function handlePriorityChange(newPriority: string) {
+    setEditingPriority(false);
+    if (newPriority === (parent.priority ?? '')) return;
+    try {
+      const removeLabels = parent.priority ? [parent.priority] : [];
+      const addLabels = newPriority ? [newPriority] : [];
+      await api.updateTask(parent.number, { removeLabels, addLabels });
+      await onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '優先度の更新に失敗しました');
+    }
+  }
+
+  function startEditDue() {
+    setDueInputValue(parent.due ?? '');
+    setEditingDue(true);
+  }
+
+  async function commitDueChange() {
+    setEditingDue(false);
+    if (dueInputValue === (parent.due ?? '')) return;
+    try {
+      const rawBody = parent.body ?? '';
+      const displayBody = stripControlLines(rawBody);
+      const newBody = buildFinalBody(displayBody, rawBody, dueInputValue);
+      await api.updateTask(parent.number, { body: newBody });
+      await onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '期日の更新に失敗しました');
+    }
+  }
+
   return (
     <>
       {/* 親 project 行 */}
@@ -137,14 +173,52 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           </div>
 
         </td>
-        <td>
-          {parent.priority && (
+        <td
+          onClick={() => !editingPriority && setEditingPriority(true)}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingPriority ? (
+            <select
+              autoFocus
+              value={parent.priority ?? ''}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              onBlur={() => setEditingPriority(false)}
+              className="inline-select"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">なし</option>
+              <option value="p1">p1（高）</option>
+              <option value="p2">p2（中）</option>
+              <option value="p3">p3（低）</option>
+            </select>
+          ) : parent.priority ? (
             <span className={`badge pri-${parent.priority}`}>{parent.priority}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
-        <td>
-          {parent.due && (
+        <td
+          onClick={() => !editingDue && startEditDue()}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingDue ? (
+            <input
+              type="date"
+              autoFocus
+              value={dueInputValue}
+              onChange={(e) => setDueInputValue(e.target.value)}
+              onBlur={commitDueChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitDueChange();
+                if (e.key === 'Escape') setEditingDue(false);
+              }}
+              className="inline-date"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : parent.due ? (
             <span className={`due-date${isOverdue ? ' overdue' : ''}`}>{parent.due}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
         <td>
@@ -196,6 +270,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           onDone={onDone}
           onMove={onMove}
           onDetail={onDetail}
+          onRefresh={onRefresh}
         />
       ))}
 
@@ -242,15 +317,20 @@ function ChildTaskRow({
   onDone,
   onMove,
   onDetail,
+  onRefresh,
 }: {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
   onDetail: (task: Task) => void;
+  onRefresh: () => Promise<void>;
 }) {
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [editingPriority, setEditingPriority] = useState(false);
+  const [editingDue, setEditingDue] = useState(false);
+  const [dueInputValue, setDueInputValue] = useState(task.due ?? '');
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
@@ -290,6 +370,38 @@ function ChildTaskRow({
     onDetail(task);
   }
 
+  async function handlePriorityChange(newPriority: string) {
+    setEditingPriority(false);
+    if (newPriority === (task.priority ?? '')) return;
+    try {
+      const removeLabels = task.priority ? [task.priority] : [];
+      const addLabels = newPriority ? [newPriority] : [];
+      await api.updateTask(task.number, { removeLabels, addLabels });
+      await onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '優先度の更新に失敗しました');
+    }
+  }
+
+  function startEditDue() {
+    setDueInputValue(task.due ?? '');
+    setEditingDue(true);
+  }
+
+  async function commitDueChange() {
+    setEditingDue(false);
+    if (dueInputValue === (task.due ?? '')) return;
+    try {
+      const rawBody = task.body ?? '';
+      const displayBody = stripControlLines(rawBody);
+      const newBody = buildFinalBody(displayBody, rawBody, dueInputValue);
+      await api.updateTask(task.number, { body: newBody });
+      await onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '期日の更新に失敗しました');
+    }
+  }
+
   return (
     <>
       <tr
@@ -312,14 +424,52 @@ function ChildTaskRow({
           </div>
 
         </td>
-        <td>
-          {task.priority && (
+        <td
+          onClick={() => !editingPriority && setEditingPriority(true)}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingPriority ? (
+            <select
+              autoFocus
+              value={task.priority ?? ''}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              onBlur={() => setEditingPriority(false)}
+              className="inline-select"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">なし</option>
+              <option value="p1">p1（高）</option>
+              <option value="p2">p2（中）</option>
+              <option value="p3">p3（低）</option>
+            </select>
+          ) : task.priority ? (
             <span className={`badge pri-${task.priority}`}>{task.priority}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
-        <td>
-          {task.due && (
+        <td
+          onClick={() => !editingDue && startEditDue()}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingDue ? (
+            <input
+              type="date"
+              autoFocus
+              value={dueInputValue}
+              onChange={(e) => setDueInputValue(e.target.value)}
+              onBlur={commitDueChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitDueChange();
+                if (e.key === 'Escape') setEditingDue(false);
+              }}
+              className="inline-date"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : task.due ? (
             <span className={`due-date${isOverdue ? ' overdue' : ''}`}>{task.due}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
         <td>

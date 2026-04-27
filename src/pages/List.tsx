@@ -229,6 +229,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
                 onDone={handleDone}
                 onMove={handleMove}
                 onDetail={handleDetail}
+                onSaved={handleRefresh}
               />
             ))}
           </tbody>

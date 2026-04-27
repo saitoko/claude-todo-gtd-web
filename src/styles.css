@@ -285,6 +285,33 @@ th.th-sorted { color: var(--accent); }
 
 .due-date.overdue { color: var(--danger); font-weight: 600; }
 
+/* インライン優先度・期日編集 */
+.inline-select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.inline-date {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--fg);
+  width: 130px;
+}
+
+.inline-empty {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.5;
+}
+
 /* ローディング・エラー */
 .loading, .error, .empty {
   padding: 40px;

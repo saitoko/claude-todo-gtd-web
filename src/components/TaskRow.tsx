@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
+import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
+import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
@@ -9,12 +10,16 @@ interface Props {
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
   onDetail: (task: Task) => void;
+  onSaved: () => void;
 }
 
-export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
+export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [editingPriority, setEditingPriority] = useState(false);
+  const [editingDue, setEditingDue] = useState(false);
+  const [dueInputValue, setDueInputValue] = useState(task.due ?? '');
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
@@ -59,6 +64,38 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
     onDetail(task);
   }
 
+  async function handlePriorityChange(newPriority: string) {
+    setEditingPriority(false);
+    if (newPriority === (task.priority ?? '')) return;
+    try {
+      const removeLabels = task.priority ? [task.priority] : [];
+      const addLabels = newPriority ? [newPriority] : [];
+      await api.updateTask(task.number, { removeLabels, addLabels });
+      onSaved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '優先度の更新に失敗しました');
+    }
+  }
+
+  function startEditDue() {
+    setDueInputValue(task.due ?? '');
+    setEditingDue(true);
+  }
+
+  async function commitDueChange() {
+    setEditingDue(false);
+    if (dueInputValue === (task.due ?? '')) return;
+    try {
+      const rawBody = task.body ?? '';
+      const displayBody = stripControlLines(rawBody);
+      const newBody = buildFinalBody(displayBody, rawBody, dueInputValue);
+      await api.updateTask(task.number, { body: newBody });
+      onSaved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '期日の更新に失敗しました');
+    }
+  }
+
   return (
     <>
       <tr
@@ -73,14 +110,52 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
         <td onClick={handleTitleClick}>
           <span className="title-text" style={{ cursor: 'pointer' }}>{task.title}</span>
         </td>
-        <td>
-          {task.priority && (
+        <td
+          onClick={() => !editingPriority && setEditingPriority(true)}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingPriority ? (
+            <select
+              autoFocus
+              value={task.priority ?? ''}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              onBlur={() => setEditingPriority(false)}
+              className="inline-select"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">なし</option>
+              <option value="p1">p1（高）</option>
+              <option value="p2">p2（中）</option>
+              <option value="p3">p3（低）</option>
+            </select>
+          ) : task.priority ? (
             <span className={`badge pri-${task.priority}`}>{task.priority}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
-        <td>
-          {task.due && (
+        <td
+          onClick={() => !editingDue && startEditDue()}
+          style={{ cursor: 'pointer' }}
+        >
+          {editingDue ? (
+            <input
+              type="date"
+              autoFocus
+              value={dueInputValue}
+              onChange={(e) => setDueInputValue(e.target.value)}
+              onBlur={commitDueChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitDueChange();
+                if (e.key === 'Escape') setEditingDue(false);
+              }}
+              className="inline-date"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : task.due ? (
             <span className={`due-date${isOverdue ? ' overdue' : ''}`}>{task.due}</span>
+          ) : (
+            <span className="inline-empty">-</span>
           )}
         </td>
         <td>
