@@ -28,7 +28,7 @@ a:hover { text-decoration: underline; }
 
 .app {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 160px 1fr;
   min-height: 100vh;
 }
 
@@ -58,6 +58,7 @@ a:hover { text-decoration: underline; }
 .sidebar nav a.active { background: #ddf4ff; color: var(--accent); font-weight: 600; }
 
 .nav-label { flex: 1; }
+.nav-icon { display: none; }
 
 .nav-badge {
   background: var(--badge-bg);
