@@ -150,19 +150,6 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn btn-danger"
-              onClick={() => {
-                if (hasChildren) { setShowConfirm(true); return; }
-                if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
-                setBusy(true);
-                onDone(parent.number).finally(() => setBusy(false));
-              }}
-              disabled={busy}
-              title="完了（Issue クローズ）"
-            >
-              完了
-            </button>
             <div className="move-group">
               <select
                 value={moveTarget}
@@ -184,6 +171,19 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
                 移動
               </button>
             </div>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (hasChildren) { setShowConfirm(true); return; }
+                if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
+                setBusy(true);
+                onDone(parent.number).finally(() => setBusy(false));
+              }}
+              disabled={busy}
+              title="完了（Issue クローズ）"
+            >
+              完了
+            </button>
           </div>
         </td>
       </tr>
@@ -325,18 +325,6 @@ function ChildTaskRow({
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn btn-danger"
-              onClick={async () => {
-                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
-                setBusy(true);
-                try { await onDone(task.number); } finally { setBusy(false); }
-              }}
-              disabled={busy}
-              title="完了（Issue クローズ）"
-            >
-              完了
-            </button>
             <div className="move-group">
               <select
                 value={moveTarget}
@@ -358,6 +346,18 @@ function ChildTaskRow({
                 移動
               </button>
             </div>
+            <button
+              className="btn btn-danger"
+              onClick={async () => {
+                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+                setBusy(true);
+                try { await onDone(task.number); } finally { setBusy(false); }
+              }}
+              disabled={busy}
+              title="完了（Issue クローズ）"
+            >
+              完了
+            </button>
           </div>
         </td>
       </tr>

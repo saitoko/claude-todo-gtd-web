@@ -223,7 +223,7 @@ th.th-sorted { color: var(--accent); }
   display: flex;
   gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
 }
 

@@ -199,7 +199,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
               <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
               <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 190 }}>操作</th>
+              <th style={{ width: 240 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -227,7 +227,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
               <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
               <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 190 }}>操作</th>
+              <th style={{ width: 240 }}></th>
             </tr>
           </thead>
           <tbody>

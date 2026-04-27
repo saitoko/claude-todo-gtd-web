@@ -86,20 +86,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn btn-danger"
-              onClick={async () => {
-                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
-                setHidden(true);
-                try { await onDone(task.number); } catch (err: unknown) {
-                  setHidden(false);
-                  alert(err instanceof Error ? err.message : '完了処理に失敗しました');
-                }
-              }}
-              title="完了（Issue クローズ）"
-            >
-              完了
-            </button>
             <div className="move-group">
               <select
                 value={moveTarget}
@@ -120,6 +106,20 @@ export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
                 移動
               </button>
             </div>
+            <button
+              className="btn btn-danger"
+              onClick={async () => {
+                if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+                setHidden(true);
+                try { await onDone(task.number); } catch (err: unknown) {
+                  setHidden(false);
+                  alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+                }
+              }}
+              title="完了（Issue クローズ）"
+            >
+              完了
+            </button>
           </div>
         </td>
       </tr>
