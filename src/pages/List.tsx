@@ -43,7 +43,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   const [childTasks, setChildTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detailNumber, setDetailNumber] = useState<number | null>(null);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [addFormOpen, setAddFormOpen] = useState(false);
@@ -115,8 +115,8 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
     await fetchTasks();
   }
 
-  function handleDetail(number: number) {
-    setDetailNumber(number);
+  function handleDetail(task: Task) {
+    setDetailTask(task);
   }
 
   const displayName = GTD_DISPLAY[gtd] ?? gtd;
@@ -238,17 +238,17 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
                 onDone={handleDone}
                 onMove={handleMove}
                 onDetail={handleDetail}
-                onEdit={handleRefresh}
               />
             ))}
           </tbody>
         </table>
       )}
 
-      {detailNumber !== null && (
+      {detailTask !== null && (
         <TaskDetailModal
-          taskNumber={detailNumber}
-          onClose={() => setDetailNumber(null)}
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+          onSaved={handleRefresh}
         />
       )}
     </div>

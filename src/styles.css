@@ -723,8 +723,14 @@ th.th-sorted { color: var(--accent); }
   word-break: break-word;
 }
 
-.task-detail-close {
+.task-detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.task-detail-close {
   font-size: 14px;
   padding: 2px 8px;
 }

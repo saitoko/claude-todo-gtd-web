@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY } from '../lib/api';
-import EditForm from './EditForm';
 import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
@@ -9,19 +8,16 @@ interface Props {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
-  onDetail: (number: number) => void;
-  onEdit: () => Promise<void>;
+  onDetail: (task: Task) => void;
 }
 
-export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Props) {
+export default function TaskRow({ task, onDone, onMove, onDetail }: Props) {
   const [moveTarget, setMoveTarget] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [hidden, setHidden] = useState(false);
 
-  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
+  const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
-  // due の色分け（今日以前 = 期限切れ）
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = task.due != null && task.due < today;
 
@@ -59,9 +55,8 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
   }
 
   function handleTitleClick() {
-    // スワイプが開いているときはタップを無視
     if (isOpen) return;
-    onDetail(task.number);
+    onDetail(task);
   }
 
   return (
@@ -75,9 +70,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
         <td>
           <span className="issue-num">#{task.number}</span>
         </td>
-        <td
-          onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
-        >
+        <td onClick={handleTitleClick}>
           <span className="title-text" style={{ cursor: 'pointer' }}>{task.title}</span>
         </td>
         <td>
@@ -93,20 +86,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn"
-              onClick={() => setEditOpen((prev) => !prev)}
-              title="編集"
-            >
-              ✏️
-            </button>
-            <button
-              className="btn"
-              onClick={() => onDetail(task.number)}
-              title="詳細を表示"
-            >
-              詳細
-            </button>
             <button
               className="btn btn-danger"
               onClick={async () => {
@@ -144,17 +123,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onEdit }: Prop
           </div>
         </td>
       </tr>
-      {editOpen && (
-        <tr className="edit-form-row-tr">
-          <td colSpan={5}>
-            <EditForm
-              task={task}
-              onSave={async () => { setEditOpen(false); await onEdit(); }}
-              onCancel={() => setEditOpen(false)}
-            />
-          </td>
-        </tr>
-      )}
 
       {/* スワイプ完了後: fixed でボタンを表示 */}
       {isOpen && (() => {

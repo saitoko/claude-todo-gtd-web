@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
-import EditForm from './EditForm';
 import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
@@ -13,7 +12,7 @@ interface Props {
   onMove: (number: number, targetGtd: string) => Promise<void>;
   /** 子タスクも含めて完了した後など、APIを再呼び出しせずリスト再フェッチだけしたいとき */
   onRefresh: () => Promise<void>;
-  onDetail: (number: number) => void;
+  onDetail: (task: Task) => void;
 }
 
 export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh, onDetail }: Props) {
@@ -21,10 +20,9 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
 
-  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
+  const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = parent.due != null && parent.due < today;
@@ -32,11 +30,9 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
 
   async function handleSwipeDone() {
     if (hasChildren) {
-      // 子タスクがある場合はモーダルで3択確認（スワイプでも同様）
       setShowConfirm(true);
       return;
     }
-    // 子タスクなし → 確認なしで即完了
     setBusy(true);
     try {
       await onDone(parent.number);
@@ -103,7 +99,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
 
   function handleTitleClick() {
     if (isOpen) return;
-    onDetail(parent.number);
+    onDetail(parent);
   }
 
   return (
@@ -132,7 +128,7 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
               <span className="expand-btn-placeholder" />
             )}
             <span
-              onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
+              onClick={handleTitleClick}
               style={{ cursor: 'pointer', flex: 1 }}
             >{parent.title}</span>
             {hasChildren && (
@@ -154,22 +150,6 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn"
-              onClick={() => setEditOpen((prev) => !prev)}
-              disabled={busy}
-              title="編集"
-            >
-              ✏️
-            </button>
-            <button
-              className="btn"
-              onClick={() => onDetail(parent.number)}
-              disabled={busy}
-              title="詳細を表示"
-            >
-              詳細
-            </button>
             <button
               className="btn btn-danger"
               onClick={() => {
@@ -208,18 +188,6 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         </td>
       </tr>
 
-      {editOpen && (
-        <tr className="edit-form-row-tr">
-          <td colSpan={5}>
-            <EditForm
-              task={parent}
-              onSave={async () => { setEditOpen(false); await onRefresh(); }}
-              onCancel={() => setEditOpen(false)}
-            />
-          </td>
-        </tr>
-      )}
-
       {/* 子タスク行（展開時のみ） */}
       {expanded && children.map((child) => (
         <ChildTaskRow
@@ -228,7 +196,6 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           onDone={onDone}
           onMove={onMove}
           onDetail={onDetail}
-          onEdit={onRefresh}
         />
       ))}
 
@@ -275,26 +242,22 @@ function ChildTaskRow({
   onDone,
   onMove,
   onDetail,
-  onEdit,
 }: {
   task: Task;
   onDone: (number: number) => Promise<void>;
   onMove: (number: number, targetGtd: string) => Promise<void>;
-  onDetail: (number: number) => void;
-  onEdit: () => Promise<void>;
+  onDetail: (task: Task) => void;
 }) {
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
 
-  const { offset, isOpen, handlers, reset, containerRef } = useSwipeReveal();
+  const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
   const isOverdue = task.due != null && task.due < today;
 
   async function handleSwipeDone() {
-    // スワイプ完了は確認なし
     setBusy(true);
     try {
       await onDone(task.number);
@@ -324,7 +287,7 @@ function ChildTaskRow({
 
   function handleTitleClick() {
     if (isOpen) return;
-    onDetail(task.number);
+    onDetail(task);
   }
 
   return (
@@ -340,7 +303,7 @@ function ChildTaskRow({
         <td>
           <div className="child-title-cell">
             <span
-              onClick={editOpen ? () => setEditOpen(false) : handleTitleClick}
+              onClick={handleTitleClick}
               style={{ cursor: 'pointer' }}
             >{task.title}</span>
             <span className={`badge gtd-${task.gtdCategory} gtd-badge-small`}>
@@ -362,22 +325,6 @@ function ChildTaskRow({
         <td>
           {/* PC 操作列（モバイルは CSS で display:none） */}
           <div className="task-actions">
-            <button
-              className="btn"
-              onClick={() => setEditOpen((prev) => !prev)}
-              disabled={busy}
-              title="編集"
-            >
-              ✏️
-            </button>
-            <button
-              className="btn"
-              onClick={() => onDetail(task.number)}
-              disabled={busy}
-              title="詳細を表示"
-            >
-              詳細
-            </button>
             <button
               className="btn btn-danger"
               onClick={async () => {
@@ -414,17 +361,6 @@ function ChildTaskRow({
           </div>
         </td>
       </tr>
-      {editOpen && (
-        <tr className="edit-form-row-tr">
-          <td colSpan={5}>
-            <EditForm
-              task={task}
-              onSave={async () => { setEditOpen(false); await onEdit(); }}
-              onCancel={() => setEditOpen(false)}
-            />
-          </td>
-        </tr>
-      )}
 
       {/* スワイプ完了後: fixed でボタンを表示 */}
       {isOpen && (() => {
