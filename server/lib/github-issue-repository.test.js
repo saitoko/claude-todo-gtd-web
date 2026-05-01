@@ -103,4 +103,16 @@ describe('GitHubIssueRepository._normalize', () => {
     assert.equal(task.body, '');
   });
 
+  it('updatedAt あり → task.updatedAt に値が入る', () => {
+    const task = repo._normalize(makeIssue({ updatedAt: '2026-04-01T10:00:00Z' }));
+    assert.equal(task.updatedAt, '2026-04-01T10:00:00Z');
+  });
+
+  it('updatedAt なし（undefined）→ task.updatedAt が null', () => {
+    const issue = makeIssue();
+    // makeIssue はデフォルトで updatedAt を含まない
+    const task = repo._normalize(issue);
+    assert.equal(task.updatedAt, null);
+  });
+
 });

@@ -1059,3 +1059,134 @@ th.th-sorted { color: var(--accent); }
   border-color: var(--accent);
   color: #fff;
 }
+
+/* ===== Focus ビュー ===== */
+
+.focus-page {}
+
+/* コンテキスト選択バー */
+.focus-context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* コンテキストボタン */
+.focus-context-btn {
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.focus-context-btn:hover {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.focus-context-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* コンテキスト未設定トグル */
+.focus-nocontext-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* モバイル: コンテキストボタンを横スクロール */
+@media (max-width: 640px) {
+  .focus-context-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+  .focus-context-bar::-webkit-scrollbar { display: none; }
+  .focus-context-btn {
+    flex-shrink: 0;
+    font-size: 14px;
+    padding: 6px 16px;
+  }
+  .focus-nocontext-toggle {
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+}
+
+/* ===== Insight ビュー ===== */
+
+.insight-page {}
+
+/* セクション */
+.insight-section {
+  margin-bottom: 28px;
+}
+
+/* セクションヘッダー */
+.insight-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.insight-section-header + table {
+  border-radius: 0 0 8px 8px;
+}
+
+.insight-section-title {
+  flex: 1;
+}
+
+/* 該当なし表示 */
+.insight-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+}
+
+/* 「他 N 件」展開エリア */
+.insight-expand {
+  padding: 8px 0;
+  text-align: center;
+}
+
+/* モバイル: セクションヘッダーを調整 */
+@media (max-width: 640px) {
+  .insight-section-header {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  .insight-section {
+    margin-bottom: 20px;
+  }
+}

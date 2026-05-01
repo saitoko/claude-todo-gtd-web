@@ -260,6 +260,7 @@ class GitHubIssueRepository {
       body: issue.body || '',
       due,
       priority,
+      updatedAt: issue.updatedAt || null,
       parentProject,
     };
   }

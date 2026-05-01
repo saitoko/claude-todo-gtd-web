@@ -8,6 +8,7 @@ export interface Task {
   body: string;
   due: string | null;
   priority: string | null; // 'p1' | 'p2' | 'p3' | null
+  updatedAt: string | null; // ISO 8601 形式 (e.g. "2026-01-01T00:00:00Z")
   parentProject?: number | null; // 親プロジェクトの Issue 番号（body の `project: #N` から抽出）
 }
 

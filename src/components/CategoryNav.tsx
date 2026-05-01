@@ -33,6 +33,20 @@ export default function CategoryNav({ byCategory }: Props) {
             )}
           </NavLink>
         ))}
+        <NavLink
+          to="/focus"
+          className={({ isActive }) => (isActive ? 'active' : undefined)}
+        >
+          <span className="nav-icon" aria-label="Focus">🎯</span>
+          <span className="nav-label">Focus</span>
+        </NavLink>
+        <NavLink
+          to="/insight"
+          className={({ isActive }) => (isActive ? 'active' : undefined)}
+        >
+          <span className="nav-icon" aria-label="Insight">💡</span>
+          <span className="nav-label">Insight</span>
+        </NavLink>
       </nav>
     </aside>
   );
