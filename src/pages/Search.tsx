@@ -58,10 +58,11 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     }
   }
 
-  function thProps(key: SortKey) {
+  function thProps(key: SortKey, extraClass?: string) {
     const active = sortKey === key;
+    const base = extraClass ? `${extraClass} ` : '';
     return {
-      className: `th-sortable${active ? ' th-sorted' : ''}`,
+      className: `${base}th-sortable${active ? ' th-sorted' : ''}`,
       onClick: () => handleSort(key),
     };
   }
@@ -95,6 +96,18 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setRefreshKey(k => k + 1);
   }
 
+  // 検索結果に含まれる GTD カテゴリを収集（絵文字チップ用）
+  const availableGtdLabels = useMemo(() => {
+    const set = new Set<string>();
+    for (const { task } of results) {
+      if ((GTD_KEYS as readonly string[]).includes(task.gtdCategory)) {
+        set.add(task.gtdCategory);
+      }
+    }
+    // GTD_KEYS の順序に従って並べる
+    return GTD_KEYS.filter(k => set.has(k));
+  }, [results]);
+
   // 検索結果からGTDラベルを除いたラベル一覧を収集
   const availableLabels = useMemo(() => {
     const set = new Set<string>();
@@ -117,6 +130,13 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
   function toggleLabel(label: string) {
     setSelectedLabels(prev =>
       prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  }
+
+  // GTD カテゴリ別絞り込み（selectedLabels 配列で兼用）
+  function toggleGtdLabel(key: string) {
+    setSelectedLabels(prev =>
+      prev.includes(key) ? prev.filter(l => l !== key) : [...prev, key]
     );
   }
 
@@ -171,6 +191,21 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
         本文も検索する
       </label>
 
+      {/* GTD カテゴリ絞り込みチップ（絵文字付き） */}
+      {availableGtdLabels.length > 0 && (
+        <div className="label-filter">
+          {availableGtdLabels.map(key => (
+            <button
+              key={key}
+              className={`label-filter-btn${selectedLabels.includes(key) ? ' active' : ''}`}
+              onClick={() => toggleGtdLabel(key)}
+            >
+              {GTD_DISPLAY[key as GtdKey] ?? key}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ラベル絞り込み */}
       {availableLabels.length > 0 && (
         <div className="label-filter">
@@ -216,11 +251,11 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+                      <th {...thProps('number', 'th-num')}># {sortIcon('number')}</th>
                       <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
-                      <th style={{ width: 60 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
-                      <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th {...thProps('priority', 'th-priority')}>優先度 {sortIcon('priority')}</th>
+                      <th {...thProps('due', 'th-due')}>期日 {sortIcon('due')}</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>

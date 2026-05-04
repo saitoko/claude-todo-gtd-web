@@ -130,10 +130,11 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
 
   const projectTree = isProjectView ? buildProjectTree(displayTasks, childTasks) : [];
 
-  function thProps(key: SortKey) {
+  function thProps(key: SortKey, extraClass?: string) {
     const active = sortKey === key;
+    const base = extraClass ? `${extraClass} ` : '';
     return {
-      className: `th-sortable${active ? ' th-sorted' : ''}`,
+      className: `${base}th-sortable${active ? ' th-sorted' : ''}`,
       onClick: () => handleSort(key),
     };
   }
@@ -146,7 +147,11 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   return (
     <div>
       <div className="page-header">
-        <h2>{displayName}</h2>
+        <h2 className="breadcrumb">
+          <span className="breadcrumb-sep">Lists</span>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{displayName}</span>
+        </h2>
         {!loading && (
           <span className={`badge gtd-${gtd}`} style={{ fontSize: 13 }}>
             {tasks.length}
@@ -186,11 +191,11 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <table>
           <thead>
             <tr>
-              <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+              <th {...thProps('number', 'th-num')}># {sortIcon('number')}</th>
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
-              <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
-              <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 240 }}></th>
+              <th {...thProps('priority', 'th-priority')}>優先度 {sortIcon('priority')}</th>
+              <th {...thProps('due', 'th-due')}>期日 {sortIcon('due')}</th>
+              <th className="th-actions"></th>
             </tr>
           </thead>
           <tbody>
@@ -214,11 +219,11 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <table>
           <thead>
             <tr>
-              <th style={{ width: 60 }} {...thProps('number')}># {sortIcon('number')}</th>
+              <th {...thProps('number', 'th-num')}># {sortIcon('number')}</th>
               <th {...thProps('title')}>タイトル {sortIcon('title')}</th>
-              <th style={{ width: 80 }} {...thProps('priority')}>優先度 {sortIcon('priority')}</th>
-              <th style={{ width: 100 }} {...thProps('due')}>期日 {sortIcon('due')}</th>
-              <th style={{ width: 240 }}></th>
+              <th {...thProps('priority', 'th-priority')}>優先度 {sortIcon('priority')}</th>
+              <th {...thProps('due', 'th-due')}>期日 {sortIcon('due')}</th>
+              <th className="th-actions"></th>
             </tr>
           </thead>
           <tbody>

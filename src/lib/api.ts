@@ -56,6 +56,19 @@ export const GTD_DISPLAY: Record<GtdKey, string> = {
 // move 先として選択可能なカテゴリ（project は除外）
 export const MOVABLE_GTD_KEYS: GtdKey[] = ['next', 'waiting', 'someday', 'routine', 'reference', 'inbox'];
 
+/**
+ * GTD カテゴリキーから絵文字を抽出するユーティリティ
+ * GTD_DISPLAY の値が "{絵文字} {テキスト}" 形式であることを前提とする
+ * @param key - GtdKey または任意の文字列
+ * @returns 絵文字文字列（該当なし・形式不正の場合は key をそのまま返す）
+ */
+export function getGtdEmoji(key: string): string {
+  const display = GTD_DISPLAY[key as GtdKey];
+  if (!display) return key;
+  const emoji = display.split(' ')[0];
+  return emoji || key;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, options);
   if (!res.ok) {

@@ -166,7 +166,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           {/* ─── セクション1: Close 候補（due 超過） ─── */}
           <section className="insight-section">
             <div className="insight-section-header">
-              <span className="insight-section-title">Close 候補（期日超過）</span>
+              <span className="insight-section-title">▶ Close 候補（期日超過）</span>
               <span className="nav-badge">{closeCandidatesByDue.length}</span>
             </div>
             {closeCandidatesByDue.length === 0 ? (
@@ -176,11 +176,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }}>#</th>
+                      <th className="th-num">#</th>
                       <th>タイトル</th>
-                      <th style={{ width: 60 }}>優先度</th>
-                      <th style={{ width: 100 }}>期日</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th className="th-priority">優先度</th>
+                      <th className="th-due">期日</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -210,7 +210,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           {/* ─── セクション2: Close 候補（長期放置） ─── */}
           <section className="insight-section">
             <div className="insight-section-header">
-              <span className="insight-section-title">Close 候補（30日以上更新なし）</span>
+              <span className="insight-section-title">⏱ Close 候補（30日以上更新なし）</span>
               <span className="nav-badge">{allOldCandidates.length}</span>
             </div>
             {allOldCandidates.length === 0 ? (
@@ -220,11 +220,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }}>#</th>
+                      <th className="th-num">#</th>
                       <th>タイトル</th>
-                      <th style={{ width: 60 }}>優先度</th>
-                      <th style={{ width: 100 }}>期日</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th className="th-priority">優先度</th>
+                      <th className="th-due">期日</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,7 +254,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           {/* ─── セクション3: カテゴリ見直し候補（waiting 超過） ─── */}
           <section className="insight-section">
             <div className="insight-section-header">
-              <span className="insight-section-title">カテゴリ見直し（Waiting 期日超過）</span>
+              <span className="insight-section-title">⏳ カテゴリ見直し（Waiting 期日超過）</span>
               <span className="nav-badge">{categoryReview.waitingOverdue.length}</span>
             </div>
             {categoryReview.waitingOverdue.length === 0 ? (
@@ -264,11 +264,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }}>#</th>
+                      <th className="th-num">#</th>
                       <th>タイトル</th>
-                      <th style={{ width: 60 }}>優先度</th>
-                      <th style={{ width: 100 }}>期日</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th className="th-priority">優先度</th>
+                      <th className="th-due">期日</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -298,7 +298,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           {/* ─── セクション4: カテゴリ見直し候補（waiting due なし） ─── */}
           <section className="insight-section">
             <div className="insight-section-header">
-              <span className="insight-section-title">カテゴリ見直し（Waiting 期日なし）</span>
+              <span className="insight-section-title">⏳ カテゴリ見直し（Waiting 期日なし）</span>
               <span className="nav-badge">{categoryReview.waitingNoDue.length}</span>
             </div>
             {categoryReview.waitingNoDue.length === 0 ? (
@@ -308,11 +308,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }}>#</th>
+                      <th className="th-num">#</th>
                       <th>タイトル</th>
-                      <th style={{ width: 60 }}>優先度</th>
-                      <th style={{ width: 100 }}>期日</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th className="th-priority">優先度</th>
+                      <th className="th-due">期日</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -342,7 +342,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           {/* ─── セクション5: カテゴリ見直し候補（someday 全件） ─── */}
           <section className="insight-section">
             <div className="insight-section-header">
-              <span className="insight-section-title">カテゴリ見直し（Someday 全件）</span>
+              <span className="insight-section-title">🌈 カテゴリ見直し（Someday 全件）</span>
               <span className="nav-badge">{categoryReview.someday.length}</span>
             </div>
             {categoryReview.someday.length === 0 ? (
@@ -352,11 +352,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 60 }}>#</th>
+                      <th className="th-num">#</th>
                       <th>タイトル</th>
-                      <th style={{ width: 60 }}>優先度</th>
-                      <th style={{ width: 100 }}>期日</th>
-                      <th style={{ width: 280 }}>操作</th>
+                      <th className="th-priority">優先度</th>
+                      <th className="th-due">期日</th>
+                      <th className="th-actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>

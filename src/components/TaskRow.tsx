@@ -159,8 +159,8 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Pro
           )}
         </td>
         <td>
-          {/* PC 操作列（モバイルは CSS で display:none） */}
-          <div className="task-actions">
+          {/* PC 操作列（ホバー時のみ表示、モバイルは CSS で display:none） */}
+          <div className="task-actions task-actions-inline">
             <div className="move-group">
               <select
                 value={moveTarget}
