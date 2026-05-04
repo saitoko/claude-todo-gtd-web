@@ -155,11 +155,11 @@ export default function Focus({ getCache, setCache, invalidateCache }: Props) {
           <table>
             <thead>
               <tr>
-                <th style={{ width: 60 }}>#</th>
+                <th className="th-num">#</th>
                 <th>タイトル</th>
-                <th style={{ width: 60 }}>優先度</th>
-                <th style={{ width: 100 }}>期日</th>
-                <th style={{ width: 280 }}>操作</th>
+                <th className="th-priority">優先度</th>
+                <th className="th-due">期日</th>
+                <th className="th-actions">操作</th>
               </tr>
             </thead>
             <tbody>
