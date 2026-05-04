@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { GitHubIssueRepository } = require('../lib/github-issue-repository');
-const { GTD_LABELS, PROJECT_LABEL, normLabel } = require('../lib/gtd-labels');
+const { GTD_LABELS, PROJECT_LABEL, GTD_DISPLAY_JA, normLabel } = require('../lib/gtd-labels');
 
 const router = express.Router();
 const repo = new GitHubIssueRepository();
@@ -139,6 +139,20 @@ router.get('/labels', async (req, res) => {
   } catch (err) {
     handleError(res, err);
   }
+});
+
+/**
+ * GET /api/gtd-labels
+ * GTD カテゴリの表示定義（絵文字付き日本語名）を返す
+ * 静的データのため強キャッシュ可
+ */
+router.get('/gtd-labels', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400, immutable');
+  res.json({
+    labels: GTD_DISPLAY_JA,
+    keys: GTD_LABELS,
+    projectKey: PROJECT_LABEL,
+  });
 });
 
 /**

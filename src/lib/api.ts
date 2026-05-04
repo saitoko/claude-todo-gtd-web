@@ -159,6 +159,14 @@ export const api = {
     }),
 
   /**
+   * GTD カテゴリの表示定義を取得する（絵文字付き日本語名）
+   * GtdLabelsContext の初期化時に使用する。
+   * API 失敗時は GtdLabelsContext 側でフォールバック値を使うため、エラーをそのまま throw する。
+   */
+  fetchGtdLabels: (): Promise<{ labels: Record<string, string>; keys: string[]; projectKey: string }> =>
+    request('/api/gtd-labels'),
+
+  /**
    * ヘルスチェック
    */
   health: (): Promise<{ ok: boolean; owner: string; repo: string; uptime: number }> =>

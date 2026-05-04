@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { getGtdCategory } = require('./gtd-labels');
+const { getGtdCategory, GTD_DISPLAY_JA, GTD_LABELS, PROJECT_LABEL } = require('./gtd-labels');
 
 // ─── getGtdCategory テスト ───
 
@@ -62,6 +62,63 @@ describe('getGtdCategory', () => {
         `label "${label}" は "${expected}" を返すべき`
       );
     }
+  });
+
+});
+
+// ─── /api/gtd-labels レスポンス構造テスト ───
+
+describe('/api/gtd-labels レスポンス構造', () => {
+
+  it('GTD_DISPLAY_JA に 7 カテゴリすべてが含まれる', () => {
+    const expectedKeys = ['inbox', 'next', 'waiting', 'someday', 'routine', 'project', 'reference'];
+    for (const key of expectedKeys) {
+      assert.ok(
+        Object.prototype.hasOwnProperty.call(GTD_DISPLAY_JA, key),
+        `GTD_DISPLAY_JA に "${key}" が存在しない`
+      );
+    }
+    assert.equal(Object.keys(GTD_DISPLAY_JA).length, 7, 'GTD_DISPLAY_JA は 7 エントリのみを持つべき');
+  });
+
+  it('各値が「{絵文字} {テキスト}」形式である', () => {
+    // 絵文字は Unicode Emoji_Presentation プロパティを持つ文字
+    const emojiPattern = /^\p{Emoji_Presentation}\s+\S/u;
+    for (const [key, value] of Object.entries(GTD_DISPLAY_JA)) {
+      assert.match(
+        value,
+        emojiPattern,
+        `GTD_DISPLAY_JA["${key}"] = "${value}" は "{絵文字} {テキスト}" 形式でない`
+      );
+    }
+  });
+
+  it('GTD_LABELS は project を除く 6 カテゴリを含む', () => {
+    const expected = ['next', 'routine', 'inbox', 'waiting', 'someday', 'reference'];
+    assert.equal(GTD_LABELS.length, expected.length, 'GTD_LABELS は 6 件のはず');
+    for (const key of expected) {
+      assert.ok(GTD_LABELS.includes(key), `GTD_LABELS に "${key}" が含まれない`);
+    }
+    assert.ok(!GTD_LABELS.includes('project'), 'GTD_LABELS に "project" は含まれないはず');
+  });
+
+  it('PROJECT_LABEL は "project" である', () => {
+    assert.equal(PROJECT_LABEL, 'project');
+  });
+
+  it('/api/gtd-labels のレスポンス形状が期待するスキーマを満たす（モック検証）', () => {
+    // 実際の HTTP リクエストではなく、エンドポイントが返す値の構造を直接検証する
+    const mockResponse = {
+      labels: GTD_DISPLAY_JA,
+      keys: GTD_LABELS,
+      projectKey: PROJECT_LABEL,
+    };
+    assert.ok(typeof mockResponse.labels === 'object', 'labels はオブジェクトであるべき');
+    assert.ok(Array.isArray(mockResponse.keys), 'keys は配列であるべき');
+    assert.ok(typeof mockResponse.projectKey === 'string', 'projectKey は文字列であるべき');
+    assert.equal(mockResponse.projectKey, 'project');
+    assert.equal(mockResponse.labels['inbox'], '📥 Inbox');
+    assert.equal(mockResponse.labels['next'], '🎯 Next');
   });
 
 });
