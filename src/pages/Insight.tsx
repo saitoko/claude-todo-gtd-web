@@ -32,8 +32,11 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // セクションごとの展開状態（キー: セクション名）
+  // セクションごとの件数展開状態（キー: セクション名、true = 全件表示）
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  // セクションごとの折り畳み状態（キー: セクション名、true = 折り畳み中）
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   function expandSection(key: string) {
     setExpandedSections((prev) => ({ ...prev, [key]: true }));
@@ -41,6 +44,14 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
 
   function isSectionExpanded(key: string) {
     return expandedSections[key] === true;
+  }
+
+  function toggleSection(key: string) {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function isSectionCollapsed(key: string) {
+    return collapsedSections[key] === true;
   }
 
   function sliceSection(tasks: Task[], key: string) {
@@ -78,6 +89,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
     setWaitingState(INITIAL_FETCH_STATE);
     setSomedayState(INITIAL_FETCH_STATE);
     setExpandedSections({});
+    setCollapsedSections({});
 
     // 3カテゴリを並列取得
     fetchCategory('next', setNextState);
@@ -165,221 +177,256 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
         <>
           {/* ─── セクション1: Close 候補（due 超過） ─── */}
           <section className="insight-section">
-            <div className="insight-section-header">
-              <span className="insight-section-title">▶ Close 候補（期日超過）</span>
+            <button
+              className="insight-section-header"
+              onClick={() => toggleSection('closeDue')}
+              aria-expanded={!isSectionCollapsed('closeDue')}
+            >
+              <span className={`insight-collapse-icon${isSectionCollapsed('closeDue') ? ' collapsed' : ''}`}>▼</span>
+              <span className="insight-section-title">Close 候補（期日超過）</span>
               <span className="nav-badge">{closeCandidatesByDue.length}</span>
-            </div>
-            {closeCandidatesByDue.length === 0 ? (
-              <div className="insight-empty">該当なし</div>
-            ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="th-num">#</th>
-                      <th>タイトル</th>
-                      <th className="th-priority">優先度</th>
-                      <th className="th-due">期日</th>
-                      <th className="th-actions">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sliceSection(closeCandidatesByDue, 'closeDue').map((task) => (
-                      <TaskRow
-                        key={task.number}
-                        task={task}
-                        onDone={() => handleDone(task.number, task.gtdCategory)}
-                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(t) => setActiveTask(t)}
-                        onSaved={() => handleEdit(task.gtdCategory)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {hiddenCount(closeCandidatesByDue, 'closeDue') > 0 && (
-                  <div className="insight-expand">
-                    <button className="btn" onClick={() => expandSection('closeDue')}>
-                      他 {hiddenCount(closeCandidatesByDue, 'closeDue')} 件を表示
-                    </button>
-                  </div>
-                )}
-              </>
+            </button>
+            {!isSectionCollapsed('closeDue') && (
+              closeCandidatesByDue.length === 0 ? (
+                <div className="insight-empty">該当なし</div>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="th-num">#</th>
+                        <th>タイトル</th>
+                        <th className="th-priority">優先度</th>
+                        <th className="th-due">期日</th>
+                        <th className="th-actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sliceSection(closeCandidatesByDue, 'closeDue').map((task) => (
+                        <TaskRow
+                          key={task.number}
+                          task={task}
+                          onDone={() => handleDone(task.number, task.gtdCategory)}
+                          onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                          onDetail={(t) => setActiveTask(t)}
+                          onSaved={() => handleEdit(task.gtdCategory)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {hiddenCount(closeCandidatesByDue, 'closeDue') > 0 && (
+                    <div className="insight-expand">
+                      <button className="btn" onClick={() => expandSection('closeDue')}>
+                        他 {hiddenCount(closeCandidatesByDue, 'closeDue')} 件を表示
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
           </section>
 
           {/* ─── セクション2: Close 候補（長期放置） ─── */}
           <section className="insight-section">
-            <div className="insight-section-header">
+            <button
+              className="insight-section-header"
+              onClick={() => toggleSection('closeOld')}
+              aria-expanded={!isSectionCollapsed('closeOld')}
+            >
+              <span className={`insight-collapse-icon${isSectionCollapsed('closeOld') ? ' collapsed' : ''}`}>▼</span>
               <span className="insight-section-title">⏱ Close 候補（30日以上更新なし）</span>
               <span className="nav-badge">{allOldCandidates.length}</span>
-            </div>
-            {allOldCandidates.length === 0 ? (
-              <div className="insight-empty">該当なし</div>
-            ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="th-num">#</th>
-                      <th>タイトル</th>
-                      <th className="th-priority">優先度</th>
-                      <th className="th-due">期日</th>
-                      <th className="th-actions">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sliceSection(allOldCandidates, 'closeOld').map((task) => (
-                      <TaskRow
-                        key={task.number}
-                        task={task}
-                        onDone={() => handleDone(task.number, task.gtdCategory)}
-                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(t) => setActiveTask(t)}
-                        onSaved={() => handleEdit(task.gtdCategory)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {hiddenCount(allOldCandidates, 'closeOld') > 0 && (
-                  <div className="insight-expand">
-                    <button className="btn" onClick={() => expandSection('closeOld')}>
-                      他 {hiddenCount(allOldCandidates, 'closeOld')} 件を表示
-                    </button>
-                  </div>
-                )}
-              </>
+            </button>
+            {!isSectionCollapsed('closeOld') && (
+              allOldCandidates.length === 0 ? (
+                <div className="insight-empty">該当なし</div>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="th-num">#</th>
+                        <th>タイトル</th>
+                        <th className="th-priority">優先度</th>
+                        <th className="th-due">期日</th>
+                        <th className="th-actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sliceSection(allOldCandidates, 'closeOld').map((task) => (
+                        <TaskRow
+                          key={task.number}
+                          task={task}
+                          onDone={() => handleDone(task.number, task.gtdCategory)}
+                          onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                          onDetail={(t) => setActiveTask(t)}
+                          onSaved={() => handleEdit(task.gtdCategory)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {hiddenCount(allOldCandidates, 'closeOld') > 0 && (
+                    <div className="insight-expand">
+                      <button className="btn" onClick={() => expandSection('closeOld')}>
+                        他 {hiddenCount(allOldCandidates, 'closeOld')} 件を表示
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
           </section>
 
           {/* ─── セクション3: カテゴリ見直し候補（waiting 超過） ─── */}
           <section className="insight-section">
-            <div className="insight-section-header">
+            <button
+              className="insight-section-header"
+              onClick={() => toggleSection('waitingOverdue')}
+              aria-expanded={!isSectionCollapsed('waitingOverdue')}
+            >
+              <span className={`insight-collapse-icon${isSectionCollapsed('waitingOverdue') ? ' collapsed' : ''}`}>▼</span>
               <span className="insight-section-title">⏳ カテゴリ見直し（Waiting 期日超過）</span>
               <span className="nav-badge">{categoryReview.waitingOverdue.length}</span>
-            </div>
-            {categoryReview.waitingOverdue.length === 0 ? (
-              <div className="insight-empty">該当なし</div>
-            ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="th-num">#</th>
-                      <th>タイトル</th>
-                      <th className="th-priority">優先度</th>
-                      <th className="th-due">期日</th>
-                      <th className="th-actions">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sliceSection(waitingOverdueSorted, 'waitingOverdue').map((task) => (
-                      <TaskRow
-                        key={task.number}
-                        task={task}
-                        onDone={() => handleDone(task.number, task.gtdCategory)}
-                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(t) => setActiveTask(t)}
-                        onSaved={() => handleEdit(task.gtdCategory)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {hiddenCount(waitingOverdueSorted, 'waitingOverdue') > 0 && (
-                  <div className="insight-expand">
-                    <button className="btn" onClick={() => expandSection('waitingOverdue')}>
-                      他 {hiddenCount(waitingOverdueSorted, 'waitingOverdue')} 件を表示
-                    </button>
-                  </div>
-                )}
-              </>
+            </button>
+            {!isSectionCollapsed('waitingOverdue') && (
+              categoryReview.waitingOverdue.length === 0 ? (
+                <div className="insight-empty">該当なし</div>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="th-num">#</th>
+                        <th>タイトル</th>
+                        <th className="th-priority">優先度</th>
+                        <th className="th-due">期日</th>
+                        <th className="th-actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sliceSection(waitingOverdueSorted, 'waitingOverdue').map((task) => (
+                        <TaskRow
+                          key={task.number}
+                          task={task}
+                          onDone={() => handleDone(task.number, task.gtdCategory)}
+                          onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                          onDetail={(t) => setActiveTask(t)}
+                          onSaved={() => handleEdit(task.gtdCategory)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {hiddenCount(waitingOverdueSorted, 'waitingOverdue') > 0 && (
+                    <div className="insight-expand">
+                      <button className="btn" onClick={() => expandSection('waitingOverdue')}>
+                        他 {hiddenCount(waitingOverdueSorted, 'waitingOverdue')} 件を表示
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
           </section>
 
           {/* ─── セクション4: カテゴリ見直し候補（waiting due なし） ─── */}
           <section className="insight-section">
-            <div className="insight-section-header">
+            <button
+              className="insight-section-header"
+              onClick={() => toggleSection('waitingNoDue')}
+              aria-expanded={!isSectionCollapsed('waitingNoDue')}
+            >
+              <span className={`insight-collapse-icon${isSectionCollapsed('waitingNoDue') ? ' collapsed' : ''}`}>▼</span>
               <span className="insight-section-title">⏳ カテゴリ見直し（Waiting 期日なし）</span>
               <span className="nav-badge">{categoryReview.waitingNoDue.length}</span>
-            </div>
-            {categoryReview.waitingNoDue.length === 0 ? (
-              <div className="insight-empty">該当なし</div>
-            ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="th-num">#</th>
-                      <th>タイトル</th>
-                      <th className="th-priority">優先度</th>
-                      <th className="th-due">期日</th>
-                      <th className="th-actions">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sliceSection(waitingNoDueSorted, 'waitingNoDue').map((task) => (
-                      <TaskRow
-                        key={task.number}
-                        task={task}
-                        onDone={() => handleDone(task.number, task.gtdCategory)}
-                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(t) => setActiveTask(t)}
-                        onSaved={() => handleEdit(task.gtdCategory)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {hiddenCount(waitingNoDueSorted, 'waitingNoDue') > 0 && (
-                  <div className="insight-expand">
-                    <button className="btn" onClick={() => expandSection('waitingNoDue')}>
-                      他 {hiddenCount(waitingNoDueSorted, 'waitingNoDue')} 件を表示
-                    </button>
-                  </div>
-                )}
-              </>
+            </button>
+            {!isSectionCollapsed('waitingNoDue') && (
+              categoryReview.waitingNoDue.length === 0 ? (
+                <div className="insight-empty">該当なし</div>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="th-num">#</th>
+                        <th>タイトル</th>
+                        <th className="th-priority">優先度</th>
+                        <th className="th-due">期日</th>
+                        <th className="th-actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sliceSection(waitingNoDueSorted, 'waitingNoDue').map((task) => (
+                        <TaskRow
+                          key={task.number}
+                          task={task}
+                          onDone={() => handleDone(task.number, task.gtdCategory)}
+                          onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                          onDetail={(t) => setActiveTask(t)}
+                          onSaved={() => handleEdit(task.gtdCategory)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {hiddenCount(waitingNoDueSorted, 'waitingNoDue') > 0 && (
+                    <div className="insight-expand">
+                      <button className="btn" onClick={() => expandSection('waitingNoDue')}>
+                        他 {hiddenCount(waitingNoDueSorted, 'waitingNoDue')} 件を表示
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
           </section>
 
           {/* ─── セクション5: カテゴリ見直し候補（someday 全件） ─── */}
           <section className="insight-section">
-            <div className="insight-section-header">
+            <button
+              className="insight-section-header"
+              onClick={() => toggleSection('someday')}
+              aria-expanded={!isSectionCollapsed('someday')}
+            >
+              <span className={`insight-collapse-icon${isSectionCollapsed('someday') ? ' collapsed' : ''}`}>▼</span>
               <span className="insight-section-title">🌈 カテゴリ見直し（Someday 全件）</span>
               <span className="nav-badge">{categoryReview.someday.length}</span>
-            </div>
-            {categoryReview.someday.length === 0 ? (
-              <div className="insight-empty">該当なし</div>
-            ) : (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="th-num">#</th>
-                      <th>タイトル</th>
-                      <th className="th-priority">優先度</th>
-                      <th className="th-due">期日</th>
-                      <th className="th-actions">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sliceSection(categoryReview.someday, 'someday').map((task) => (
-                      <TaskRow
-                        key={task.number}
-                        task={task}
-                        onDone={() => handleDone(task.number, task.gtdCategory)}
-                        onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
-                        onDetail={(t) => setActiveTask(t)}
-                        onSaved={() => handleEdit(task.gtdCategory)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                {hiddenCount(categoryReview.someday, 'someday') > 0 && (
-                  <div className="insight-expand">
-                    <button className="btn" onClick={() => expandSection('someday')}>
-                      他 {hiddenCount(categoryReview.someday, 'someday')} 件を表示
-                    </button>
-                  </div>
-                )}
-              </>
+            </button>
+            {!isSectionCollapsed('someday') && (
+              categoryReview.someday.length === 0 ? (
+                <div className="insight-empty">該当なし</div>
+              ) : (
+                <>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="th-num">#</th>
+                        <th>タイトル</th>
+                        <th className="th-priority">優先度</th>
+                        <th className="th-due">期日</th>
+                        <th className="th-actions">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sliceSection(categoryReview.someday, 'someday').map((task) => (
+                        <TaskRow
+                          key={task.number}
+                          task={task}
+                          onDone={() => handleDone(task.number, task.gtdCategory)}
+                          onMove={(num, targetGtd) => handleMove(num, targetGtd, task.gtdCategory)}
+                          onDetail={(t) => setActiveTask(t)}
+                          onSaved={() => handleEdit(task.gtdCategory)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {hiddenCount(categoryReview.someday, 'someday') > 0 && (
+                    <div className="insight-expand">
+                      <button className="btn" onClick={() => expandSection('someday')}>
+                        他 {hiddenCount(categoryReview.someday, 'someday')} 件を表示
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
             )}
           </section>
         </>

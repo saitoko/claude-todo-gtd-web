@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import CategoryNav from './components/CategoryNav';
 import MobileTabBar from './components/MobileTabBar';
 import MobileFab from './components/MobileFab';
@@ -53,7 +53,6 @@ export default function App() {
   const isMobile = useMobileBreakpoint();
   const [fabOpen, setFabOpen] = useState(false);
   const [listsDrawerOpen, setListsDrawerOpen] = useState(false);
-  const navigate = useNavigate();
 
   const handleCategoryChange = useCallback((bc: Record<string, number>) => {
     setByCategory(bc);
@@ -133,8 +132,6 @@ export default function App() {
           open={fabOpen}
           onClose={() => setFabOpen(false)}
           onAdd={handleFabAdd}
-          onRefresh={async () => { invalidateCache(); }}
-          onSearch={() => { setFabOpen(false); navigate('/search'); }}
         />
       )}
     </div>

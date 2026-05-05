@@ -5,8 +5,6 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onAdd: (title: string, gtdCategory: string) => Promise<void>;
-  onRefresh?: () => Promise<void>;
-  onSearch?: () => void;
 }
 
 /**
@@ -16,8 +14,10 @@ interface Props {
  *
  * FAB ボタン自体は MobileTabBar 内に組み込まれているため、
  * このコンポーネントはボトムシートのみ担当する。
+ *
+ * onRefresh / onSearch は渡さない。ボトムシート内はタスク追加専用UIのみ。
  */
-export default function MobileFab({ open, onClose, onAdd, onRefresh, onSearch }: Props) {
+export default function MobileFab({ open, onClose, onAdd }: Props) {
   if (!open) return null;
 
   return createPortal(
@@ -39,8 +39,6 @@ export default function MobileFab({ open, onClose, onAdd, onRefresh, onSearch }:
             await onAdd(title, gtdCategory);
             onClose();
           }}
-          onRefresh={onRefresh}
-          onSearch={onSearch}
         />
       </div>
     </div>,
