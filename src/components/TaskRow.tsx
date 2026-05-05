@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
 import { stripControlLines, buildFinalBody } from '../lib/taskBody';
-import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
 
 interface Props {
@@ -15,7 +14,6 @@ interface Props {
 
 export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Props) {
   const [moveTarget, setMoveTarget] = useState('');
-  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [editingPriority, setEditingPriority] = useState(false);
   const [editingDue, setEditingDue] = useState(false);
@@ -42,17 +40,6 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Pro
     setHidden(true);
     try {
       await onMove(task.number, moveTarget);
-    } catch (err: unknown) {
-      setHidden(false);
-      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
-    }
-  }
-
-  async function handleSwipeMove(targetGtd: string) {
-    setHidden(true);
-    setShowMoveDialog(false);
-    try {
-      await onMove(task.number, targetGtd);
     } catch (err: unknown) {
       setHidden(false);
       alert(err instanceof Error ? err.message : '移動処理に失敗しました');
@@ -199,7 +186,7 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Pro
         </td>
       </tr>
 
-      {/* スワイプ完了後: fixed でボタンを表示 */}
+      {/* スワイプ完了後: fixed でボタンを表示（完了のみ） */}
       {isOpen && (() => {
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return null;
@@ -213,26 +200,11 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Pro
               className="swipe-btn-done"
               onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleSwipeDone(); }}
               onClick={(e) => { e.stopPropagation(); handleSwipeDone(); }}
-            >✅</button>
-            <button
-              className="swipe-btn-move"
-              onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setShowMoveDialog(true); }}
-              onClick={(e) => { e.stopPropagation(); setShowMoveDialog(true); }}
-            >➡️</button>
+            >✅ 完了</button>
           </div>,
           document.body
         );
       })()}
-
-      {showMoveDialog && createPortal(
-        <MoveDialog
-          taskNumber={task.number}
-          currentGtd={task.gtdCategory}
-          onMove={handleSwipeMove}
-          onClose={() => { setShowMoveDialog(false); reset(); }}
-        />,
-        document.body
-      )}
     </>
   );
 }

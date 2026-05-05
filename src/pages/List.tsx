@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, type Task, type TaskListResponse, GTD_DISPLAY, type GtdKey } from '../lib/api';
+import { api, type Task, type TaskListResponse, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
 import AddTaskForm from '../components/AddTaskForm';
 import TaskDetailModal from '../components/TaskDetailModal';
+import { useMobileBreakpoint } from '../hooks/useMobileBreakpoint';
 
 interface Props {
   gtd: GtdKey;
@@ -37,8 +38,192 @@ function buildProjectTree(
   });
 }
 
+/**
+ * タスクを「今日」「明日以降」「期日なし」のセクションに分割する
+ */
+function partitionByDate(tasks: Task[]): {
+  today: Task[];
+  future: Task[];
+  noDue: Task[];
+  todayLabel: string;
+  futureLabel: string;
+} {
+  const nowJST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
+  const today = tasks.filter((t) => t.due === nowJST);
+  const future = tasks.filter((t) => t.due != null && t.due > nowJST);
+  const noDue = tasks.filter((t) => t.due == null);
+
+  // 翌日の日付
+  const tomorrow = new Date(nowJST);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(tomorrow);
+
+  return {
+    today,
+    future,
+    noDue,
+    todayLabel: `今日（${nowJST}）`,
+    futureLabel: `明日以降（${tomorrowStr}〜）`,
+  };
+}
+
+/** モバイル用カード1件 */
+function MobileTaskCard({
+  task,
+  onDone,
+  onDetail,
+}: {
+  task: Task;
+  onDone: (n: number) => Promise<void>;
+  onDetail: (t: Task) => void;
+}) {
+  const [hidden, setHidden] = useState(false);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
+  const isOverdue = task.due != null && task.due < today;
+
+  if (hidden) return null;
+
+  return (
+    <div
+      className={`mobile-card${task.priority ? ` mobile-card-pri-${task.priority}` : ''}`}
+      onClick={() => onDetail(task)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDetail(task); }}
+    >
+      <div className="mobile-card-left">
+        <span className="mobile-card-gtd-bar" data-gtd={task.gtdCategory} />
+      </div>
+      <div className="mobile-card-body">
+        <div className="mobile-card-title">{task.title}</div>
+        <div className="mobile-card-meta">
+          <span className="mobile-card-category">{getGtdEmoji(task.gtdCategory)}</span>
+          {task.due && (
+            <span className={`mobile-card-due${isOverdue ? ' overdue' : ''}`}>
+              {task.due}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="mobile-card-right">
+        {task.priority && (
+          <span className={`badge pri-${task.priority}`}>{task.priority}</span>
+        )}
+        <button
+          className="mobile-card-done-btn"
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!window.confirm(`#${task.number} を完了しますか？`)) return;
+            setHidden(true);
+            try {
+              await onDone(task.number);
+            } catch (err) {
+              setHidden(false);
+              alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+            }
+          }}
+          title="完了"
+          aria-label="完了"
+        >
+          ✅
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** モバイル用セクションヘッダー */
+function MobileSectionHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="mobile-section-header">
+      <span className="mobile-section-label">{label}</span>
+      <span className="mobile-section-count">{count}</span>
+    </div>
+  );
+}
+
+/** モバイル用リスト（日付セクション分割） */
+function MobileTaskList({
+  tasks,
+  onDone,
+  onDetail,
+  gtd,
+}: {
+  tasks: Task[];
+  onDone: (n: number) => Promise<void>;
+  onDetail: (t: Task) => void;
+  gtd: string;
+}) {
+  const { today, future, noDue, todayLabel, futureLabel } = useMemo(
+    () => partitionByDate(tasks),
+    [tasks]
+  );
+
+  if (tasks.length === 0) return null;
+
+  // inbox/someday 等、期日が少ないカテゴリは noDue をまとめて表示
+  const showSections = today.length > 0 || future.length > 0;
+
+  return (
+    <div className="mobile-task-list">
+      {showSections && today.length > 0 && (
+        <>
+          <MobileSectionHeader label={todayLabel} count={today.length} />
+          {today.map((t) => (
+            <MobileTaskCard key={t.number} task={t} onDone={onDone} onDetail={onDetail} />
+          ))}
+        </>
+      )}
+      {showSections && future.length > 0 && (
+        <>
+          <MobileSectionHeader label={futureLabel} count={future.length} />
+          {future.map((t) => (
+            <MobileTaskCard key={t.number} task={t} onDone={onDone} onDetail={onDetail} />
+          ))}
+        </>
+      )}
+      {noDue.length > 0 && (
+        <>
+          {showSections && (
+            <MobileSectionHeader label="期日なし" count={noDue.length} />
+          )}
+          {noDue.map((t) => (
+            <MobileTaskCard key={t.number} task={t} onDone={onDone} onDetail={onDetail} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 空状態オンボーディングメッセージ */
+function EmptyState({ gtd }: { gtd: string }) {
+  const messages: Record<string, { icon: string; message: string; hint: string }> = {
+    inbox:     { icon: '📥', message: 'Inbox は空です', hint: '新しいタスクをどんどん入れましょう' },
+    next:      { icon: '🎯', message: 'Next は空です', hint: '今すぐ着手するタスクを追加しましょう' },
+    waiting:   { icon: '⏳', message: 'Waiting は空です', hint: '誰かの返答を待っているタスクはありません' },
+    someday:   { icon: '🌈', message: 'Someday は空です', hint: 'いつかやりたいアイデアを書き留めましょう' },
+    routine:   { icon: '🔁', message: 'Routine は空です', hint: '繰り返しタスクを登録しましょう' },
+    project:   { icon: '📁', message: 'Project は空です', hint: '複数ステップのプロジェクトを追加しましょう' },
+    reference: { icon: '📎', message: 'Reference は空です', hint: '参照資料・情報をここに整理しましょう' },
+  };
+
+  const { icon, message, hint } = messages[gtd] ?? {
+    icon: '📋', message: 'タスクはありません', hint: 'タスクを追加しましょう',
+  };
+
+  return (
+    <div className="empty-state">
+      <div className="empty-state-icon">{icon}</div>
+      <div className="empty-state-message">{message}</div>
+      <div className="empty-state-hint">{hint}</div>
+    </div>
+  );
+}
+
 export default function List({ gtd, onCategoryChange, getCache, setCache, invalidateCache }: Props) {
   const navigate = useNavigate();
+  const isMobile = useMobileBreakpoint();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [childTasks, setChildTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
@@ -158,23 +343,29 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           </span>
         )}
         {tip && <span className="gtd-tip">{tip}</span>}
-        <div className="page-header-actions">
-          <button
-            className="btn mobile-only"
-            onClick={() => setAddFormOpen(v => !v)}
-            aria-label="タスクを追加"
-            title="タスクを追加"
-          >✚</button>
-        </div>
+        {/* PC専用の追加ボタン（モバイルはFABを使用） */}
+        {!isMobile && (
+          <div className="page-header-actions">
+            <button
+              className="btn mobile-only"
+              onClick={() => setAddFormOpen(v => !v)}
+              aria-label="タスクを追加"
+              title="タスクを追加"
+            >✚</button>
+          </div>
+        )}
       </div>
 
-      <div className={`add-task-row${addFormOpen ? ' open' : ''}`}>
-        <AddTaskForm
-          onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }}
-          onRefresh={handleRefresh}
-          onSearch={() => navigate('/search')}
-        />
-      </div>
+      {/* PC専用の追加フォーム行 */}
+      {!isMobile && (
+        <div className={`add-task-row${addFormOpen ? ' open' : ''}`}>
+          <AddTaskForm
+            onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }}
+            onRefresh={handleRefresh}
+            onSearch={() => navigate('/search')}
+          />
+        </div>
+      )}
 
       {loading && tasks.length === 0 && <div className="loading">読み込み中...</div>}
 
@@ -182,12 +373,23 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         <div className="error">エラー: {error}</div>
       )}
 
+      {/* 空状態オンボーディング */}
       {!loading && !error && tasks.length === 0 && (
-        <div className="empty">タスクはありません</div>
+        <EmptyState gtd={gtd} />
       )}
 
-      {/* project カテゴリ: ツリー表示 */}
-      {!error && isProjectView && tasks.length > 0 && (
+      {/* モバイル: カード型リスト（日付セクション分割） */}
+      {!error && isMobile && !isProjectView && tasks.length > 0 && (
+        <MobileTaskList
+          tasks={displayTasks}
+          onDone={handleDone}
+          onDetail={handleDetail}
+          gtd={gtd}
+        />
+      )}
+
+      {/* PC: project カテゴリ ツリー表示 */}
+      {!error && !isMobile && isProjectView && tasks.length > 0 && (
         <table>
           <thead>
             <tr>
@@ -214,8 +416,8 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         </table>
       )}
 
-      {/* その他カテゴリ: フラット表示 */}
-      {!error && !isProjectView && tasks.length > 0 && (
+      {/* PC: その他カテゴリ フラット表示 */}
+      {!error && !isMobile && !isProjectView && tasks.length > 0 && (
         <table>
           <thead>
             <tr>
@@ -239,6 +441,16 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
             ))}
           </tbody>
         </table>
+      )}
+
+      {/* モバイル: project カテゴリはツリー表示（将来対応）→ 現状はフラット */}
+      {!error && isMobile && isProjectView && tasks.length > 0 && (
+        <MobileTaskList
+          tasks={displayTasks}
+          onDone={handleDone}
+          onDetail={handleDetail}
+          gtd={gtd}
+        />
       )}
 
       {detailTask !== null && (

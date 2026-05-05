@@ -1404,3 +1404,401 @@ tr:hover .task-actions-inline {
     display: flex !important;
   }
 }
+
+/* ===== フェーズ4: モバイル再設計 ===== */
+
+/* ========================================
+   下部タブバー（MobileTabBar）
+   ======================================== */
+
+/* デフォルト非表示（PC） */
+.mobile-tab-bar {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* タブバー本体 */
+  .mobile-tab-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--color-bg-sidebar);
+    border-top: 1px solid var(--color-border);
+    z-index: 100;
+    align-items: center;
+    padding: 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* タブアイテム */
+  .mobile-tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-decoration: none;
+    color: var(--color-fg-muted);
+    font-size: 10px;
+    height: 100%;
+    padding: 6px 0;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-tab-item.active {
+    color: var(--color-accent);
+  }
+
+  .mobile-tab-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .mobile-tab-label {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  /* FABスロット（中央） */
+  .mobile-fab-slot {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* FABボタン本体（タブバーより上に浮かせる） */
+  .mobile-fab {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-accent);
+    color: #fff;
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(9, 105, 218, 0.4);
+    position: absolute;
+    top: -20px;
+    z-index: 110;
+    transition: background 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-fab:active {
+    background: var(--color-accent-hover);
+    box-shadow: 0 2px 8px rgba(9, 105, 218, 0.3);
+  }
+
+  [data-theme="dark"] .mobile-fab {
+    box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+  }
+
+  /* タブバー分のパディングをmainに追加 */
+  .main-mobile {
+    padding-bottom: calc(56px + 16px);
+  }
+}
+
+/* ========================================
+   FABボトムシート（MobileFab）
+   ======================================== */
+
+.mobile-fab-sheet-overlay {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-fab-sheet-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 300;
+    align-items: flex-end;
+    animation: fadeInOverlay 0.2s ease;
+  }
+
+  @keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .mobile-fab-sheet {
+    width: 100%;
+    background: var(--color-bg-card);
+    border-radius: 16px 16px 0 0;
+    padding: 12px 16px 24px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    animation: slideUpSheet 0.25s ease;
+    /* タブバーの高さ分下に余白を追加（iOSのsafe area対応） */
+    padding-bottom: calc(24px + 56px + env(safe-area-inset-bottom, 0px));
+  }
+
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .mobile-fab-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+
+  .mobile-fab-sheet-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-fg-base);
+    margin-bottom: 12px;
+  }
+}
+
+/* ========================================
+   ボトムシート風 詳細モーダル（モバイル）
+   ======================================== */
+
+@media (max-width: 640px) {
+  .modal-overlay-bottom {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .task-detail-bottom-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    animation: slideUpSheet 0.25s ease;
+  }
+
+  .bottom-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    margin: 8px auto 4px;
+  }
+}
+
+/* ========================================
+   モバイルカード型リスト（MobileTaskCard）
+   ======================================== */
+
+.mobile-task-list {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* セクションヘッダー */
+  .mobile-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 4px;
+    margin-top: 8px;
+  }
+
+  .mobile-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mobile-section-count {
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    background: var(--color-badge-bg);
+    border-radius: 999px;
+    padding: 1px 7px;
+  }
+
+  /* カード本体 */
+  .mobile-card {
+    display: flex;
+    align-items: stretch;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.1s;
+  }
+
+  .mobile-card:active {
+    background: var(--color-bg-hover);
+  }
+
+  /* 左サイドバー（GTDカテゴリ色） */
+  .mobile-card-left {
+    width: 4px;
+    flex-shrink: 0;
+    background: var(--color-border);
+  }
+
+  .mobile-card-gtd-bar[data-gtd="inbox"]     { background: var(--color-gtd-inbox-fg); }
+  .mobile-card-gtd-bar[data-gtd="next"]      { background: var(--color-gtd-next-fg); }
+  .mobile-card-gtd-bar[data-gtd="waiting"]   { background: var(--color-gtd-waiting-fg); }
+  .mobile-card-gtd-bar[data-gtd="someday"]   { background: var(--color-gtd-someday-fg); }
+  .mobile-card-gtd-bar[data-gtd="routine"]   { background: var(--color-gtd-routine-fg); }
+  .mobile-card-gtd-bar[data-gtd="project"]   { background: var(--color-gtd-project-fg); }
+  .mobile-card-gtd-bar[data-gtd="reference"] { background: var(--color-gtd-reference-fg); }
+
+  /* カード本文エリア */
+  .mobile-card-body {
+    flex: 1;
+    padding: 10px 10px 10px 12px;
+    min-width: 0;
+  }
+
+  .mobile-card-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-fg-base);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-card-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-fg-muted);
+  }
+
+  .mobile-card-category {
+    font-size: 13px;
+  }
+
+  .mobile-card-due {
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .mobile-card-due.overdue {
+    color: var(--color-danger);
+    font-weight: 600;
+  }
+
+  /* 右エリア（優先度バッジ + 完了ボタン） */
+  .mobile-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    flex-shrink: 0;
+  }
+
+  .mobile-card-done-btn {
+    border: none;
+    background: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* 優先度ボーダー（左ボーダーは .mobile-card-gtd-bar で対応するため p1/p2/p3 用に右ボーダー） */
+  .mobile-card.mobile-card-pri-p1 { border-color: var(--color-danger); }
+  .mobile-card.mobile-card-pri-p2 { border-color: #d4a017; }
+  .mobile-card.mobile-card-pri-p3 { border-color: var(--color-accent); }
+}
+
+/* ========================================
+   空状態オンボーディング（EmptyState）
+   ======================================== */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 8px;
+}
+
+.empty-state-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.empty-state-message {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-fg-base);
+}
+
+.empty-state-hint {
+  font-size: 13px;
+  color: var(--color-fg-muted);
+}
+
+/* ========================================
+   スワイプアクション: 完了のみに変更
+   ======================================== */
+
+@media (max-width: 640px) {
+  /* 完了ボタンを幅いっぱいに */
+  .swipe-action-portal {
+    width: 100px;
+  }
+
+  .swipe-btn-done {
+    font-size: 12px;
+    gap: 4px;
+  }
+}
+
+/* ========================================
+   app-mobile クラス
+   ======================================== */
+
+@media (max-width: 640px) {
+  /* モバイル時はサイドバーを隠す（タブバーで代替） */
+  .app-mobile .sidebar {
+    display: none;
+  }
+
+  /* モバイル時はmainがフル幅 */
+  .app-mobile {
+    grid-template-columns: 1fr;
+  }
+
+  .app-mobile .main {
+    padding: 12px 14px;
+  }
+}
