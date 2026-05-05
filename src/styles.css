@@ -1555,6 +1555,14 @@ tr:hover .task-actions-inline {
   }
 }
 
+/* 極小幅端末（359px以下: iPhone SE 1st gen 320px を含む、iPhone 12 mini 375px は含まない）
+   ラベルを非表示にしてアイコンのみ表示 */
+@media (max-width: 359px) {
+  .mobile-tab-label { display: none; }
+  .mobile-tab-icon { font-size: 22px; }
+  .mobile-tab-item { padding: 8px 0; }
+}
+
 /* ========================================
    FABボトムシート（MobileFab）
    ======================================== */
