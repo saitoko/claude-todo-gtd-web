@@ -1,4 +1,4 @@
-import { type Task } from './api';
+import { type Task } from './api.ts';
 
 /**
  * 今日の日付を JST で 'YYYY-MM-DD' 形式で返す
