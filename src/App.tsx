@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-do
 import CategoryNav from './components/CategoryNav';
 import MobileTabBar from './components/MobileTabBar';
 import MobileFab from './components/MobileFab';
+import MobileListsDrawer from './components/MobileListsDrawer';
 import List from './pages/List';
 import Search from './pages/Search';
 import Focus from './pages/Focus';
@@ -51,6 +52,7 @@ export default function App() {
   const { getCache, setCache, invalidateCache } = useTaskCache();
   const isMobile = useMobileBreakpoint();
   const [fabOpen, setFabOpen] = useState(false);
+  const [listsDrawerOpen, setListsDrawerOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleCategoryChange = useCallback((bc: Record<string, number>) => {
@@ -110,7 +112,19 @@ export default function App() {
 
       {/* モバイル専用: 下部タブバー */}
       {isMobile && (
-        <MobileTabBar onFabClick={() => setFabOpen(true)} />
+        <MobileTabBar
+          onFabClick={() => setFabOpen(true)}
+          onListsClick={() => setListsDrawerOpen(true)}
+        />
+      )}
+
+      {/* モバイル専用: カテゴリ選択ドロワー */}
+      {isMobile && (
+        <MobileListsDrawer
+          open={listsDrawerOpen}
+          onClose={() => setListsDrawerOpen(false)}
+          byCategory={byCategory}
+        />
       )}
 
       {/* モバイル専用: FABボトムシート */}

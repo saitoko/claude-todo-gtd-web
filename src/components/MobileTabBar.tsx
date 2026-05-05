@@ -3,34 +3,37 @@ import { useLocation, NavLink } from 'react-router-dom';
 interface Props {
   /** タスク追加FABが押されたときのコールバック */
   onFabClick: () => void;
+  /** Lists タブが押されたときのコールバック（カテゴリ選択ドロワーを開く） */
+  onListsClick: () => void;
 }
 
 /**
  * モバイル専用の下部タブバー（max-width: 640px のみ表示）。
- * 5タブ構成: Lists / Inbox / Focus / Insight / Search
- * 中央に FAB（+ボタン）を配置。
+ * 6枠構成: Lists / Inbox / FAB（中央）/ Focus / Insight / Search
  *
- * Lists タブ: /list/:gtd すべてでアクティブ
+ * Lists タブ: タップでカテゴリ選択ドロワーを開く（/list/:gtd 全体でアクティブ）
  * Inbox タブ: /list/inbox のみ
- * Focus: /focus
+ * Focus:   /focus
  * Insight: /insight
- * Search: /search
+ * Search:  /search
  */
-export default function MobileTabBar({ onFabClick }: Props) {
+export default function MobileTabBar({ onFabClick, onListsClick }: Props) {
   const location = useLocation();
   const isListsActive = location.pathname.startsWith('/list/');
 
   return (
     <nav className="mobile-tab-bar" aria-label="メインナビゲーション">
-      {/* Lists タブ（/list/:gtd 全体でアクティブ） */}
-      <NavLink
-        to="/list/inbox"
-        className={isListsActive ? 'mobile-tab-item active' : 'mobile-tab-item'}
+      {/* Lists タブ（ドロワーを開く）: NavLink ではなく button */}
+      <button
+        className={`mobile-tab-item${isListsActive ? ' active' : ''}`}
+        onClick={onListsClick}
         aria-current={isListsActive ? 'page' : undefined}
+        aria-haspopup="dialog"
+        aria-label="カテゴリ一覧を開く"
       >
         <span className="mobile-tab-icon">≡</span>
         <span className="mobile-tab-label">Lists</span>
-      </NavLink>
+      </button>
 
       {/* Inbox タブ（Inbox直接） */}
       <NavLink
@@ -65,6 +68,17 @@ export default function MobileTabBar({ onFabClick }: Props) {
       >
         <span className="mobile-tab-icon">@</span>
         <span className="mobile-tab-label">Focus</span>
+      </NavLink>
+
+      {/* Insight タブ */}
+      <NavLink
+        to="/insight"
+        className={({ isActive }) =>
+          `mobile-tab-item${isActive ? ' active' : ''}`
+        }
+      >
+        <span className="mobile-tab-icon">💡</span>
+        <span className="mobile-tab-label">Insight</span>
       </NavLink>
 
       {/* Search タブ */}
