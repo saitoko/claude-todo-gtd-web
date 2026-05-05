@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api, type Task, type TaskDetail } from '../lib/api';
 import EditForm from './EditForm';
+import { useMobileBreakpoint } from '../hooks/useMobileBreakpoint';
 
 interface Props {
   task: Task;
@@ -26,6 +27,7 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const isMobile = useMobileBreakpoint();
 
   useEffect(() => {
     let cancelled = false;
@@ -63,18 +65,28 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, editMode]);
 
+  // モバイル: ボトムシート風レイアウト
+  // PC: 従来のセンタリングモーダル
+  const overlayClass = isMobile ? 'modal-overlay modal-overlay-bottom' : 'modal-overlay';
+  const dialogClass = isMobile
+    ? 'modal-dialog task-detail-modal task-detail-bottom-sheet'
+    : 'modal-dialog task-detail-modal';
+
   return createPortal(
     <div
-      className="modal-overlay"
+      className={overlayClass}
       onClick={editMode ? undefined : onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="task-detail-title"
     >
       <div
-        className="modal-dialog task-detail-modal"
+        className={dialogClass}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* モバイル: ドラッグハンドル */}
+        {isMobile && <div className="bottom-sheet-handle" />}
+
         {loading && (
           <div className="task-detail-loading">読み込み中...</div>
         )}
