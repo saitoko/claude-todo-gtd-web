@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test server/lib/gtd-labels.test.js server/lib/github-issue-repository.test.js server/lib/engine-sync.test.js server/lib/github-issue-repository-detail.test.js server/lib/github-issue-repository-done.test.js",
-    "test:filter": "node --experimental-strip-types --test src/lib/filterTasks.test.ts"
+    "test:filter": "node --experimental-strip-types --test src/lib/filterTasks.test.ts",
+    "test:taskbody": "node --experimental-strip-types --test src/lib/taskBody.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
