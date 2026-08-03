@@ -474,6 +474,16 @@ th.th-sorted { color: var(--color-accent); }
 
 .error { color: var(--color-danger); }
 
+/* recur再作成の簡易通知（#1672）。#1656 の本格トースト基盤が入るまでの暫定実装 */
+.recur-notice {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: var(--color-gtd-next-bg);
+  color: var(--color-gtd-next-fg);
+  font-size: 13px;
+}
+
 /* ページヘッダー */
 .page-header {
   display: flex;
