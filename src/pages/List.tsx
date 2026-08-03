@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, type Task, type TaskListResponse, type RecurCreated, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
+import { partitionByDate } from '../lib/partitionByDate';
 import { formatRecurNotice } from '../lib/recurNotice';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
@@ -41,35 +42,6 @@ function buildProjectTree(
       });
     return { parent, children };
   });
-}
-
-/**
- * タスクを「今日」「明日以降」「期日なし」のセクションに分割する
- */
-function partitionByDate(tasks: Task[]): {
-  today: Task[];
-  future: Task[];
-  noDue: Task[];
-  todayLabel: string;
-  futureLabel: string;
-} {
-  const nowJST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-  const today = tasks.filter((t) => t.due === nowJST);
-  const future = tasks.filter((t) => t.due != null && t.due > nowJST);
-  const noDue = tasks.filter((t) => t.due == null);
-
-  // 翌日の日付
-  const tomorrow = new Date(nowJST);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(tomorrow);
-
-  return {
-    today,
-    future,
-    noDue,
-    todayLabel: `今日（${nowJST}）`,
-    futureLabel: `明日以降（${tomorrowStr}〜）`,
-  };
 }
 
 /** モバイル用カード1件 */
@@ -159,7 +131,7 @@ function MobileTaskList({
   onDetail: (t: Task) => void;
   gtd: string;
 }) {
-  const { today, future, noDue, todayLabel, futureLabel } = useMemo(
+  const { overdue, today, future, noDue, overdueLabel, todayLabel, futureLabel } = useMemo(
     () => partitionByDate(tasks),
     [tasks]
   );
@@ -167,10 +139,18 @@ function MobileTaskList({
   if (tasks.length === 0) return null;
 
   // inbox/someday 等、期日が少ないカテゴリは noDue をまとめて表示
-  const showSections = today.length > 0 || future.length > 0;
+  const showSections = overdue.length > 0 || today.length > 0 || future.length > 0;
 
   return (
     <div className="mobile-task-list">
+      {showSections && overdue.length > 0 && (
+        <>
+          <MobileSectionHeader label={overdueLabel} count={overdue.length} />
+          {overdue.map((t) => (
+            <MobileTaskCard key={t.number} task={t} onDone={onDone} onDetail={onDetail} />
+          ))}
+        </>
+      )}
       {showSections && today.length > 0 && (
         <>
           <MobileSectionHeader label={todayLabel} count={today.length} />

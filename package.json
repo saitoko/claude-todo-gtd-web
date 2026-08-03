@@ -13,7 +13,8 @@
     "test:filter": "node --experimental-strip-types --test src/lib/filterTasks.test.ts",
     "test:taskbody": "node --experimental-strip-types --test src/lib/taskBody.test.ts",
     "test:api": "node --experimental-strip-types --test src/lib/api.test.ts",
-    "test:recurnotice": "node --experimental-strip-types --test src/lib/recurNotice.test.ts"
+    "test:recurnotice": "node --experimental-strip-types --test src/lib/recurNotice.test.ts",
+    "test:partitionbydate": "node --experimental-strip-types --test src/lib/partitionByDate.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
