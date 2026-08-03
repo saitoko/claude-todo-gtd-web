@@ -75,7 +75,10 @@ router.get('/tasks/:number', async (req, res) => {
  * POST /api/tasks/:number/done
  * タスクを完了（Issue クローズ）する
  * Body: { withChildren?: boolean }
- * Response: { ok: true, closedChildren?: number[] }
+ * Response: { ok: true, closedChildren?: number[], recurCreated?: Array<{ number: number, newIssueNumber: number }> }
+ *
+ * Issue #1672: repo.done() が返す recurCreated（#1669 で追加された次周期Issue再作成情報）を
+ * レスポンスに含める。Web UI 側で「次周期のタスクが作成されました」通知を出せるようにするため。
  */
 router.post('/tasks/:number/done', async (req, res) => {
   try {
@@ -86,7 +89,7 @@ router.post('/tasks/:number/done', async (req, res) => {
 
     const withChildren = !!(req.body && req.body.withChildren);
     const result = await repo.done(req._tenant, num, { withChildren });
-    res.json({ ok: true, closedChildren: result.closedChildren });
+    res.json({ ok: true, closedChildren: result.closedChildren, recurCreated: result.recurCreated });
   } catch (err) {
     handleError(res, err);
   }

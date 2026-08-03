@@ -33,6 +33,12 @@ export interface TaskDetail extends Task {
   comments: TaskComment[];
 }
 
+/** done() でrecur再作成が起きた際の対応表（#1672） */
+export interface RecurCreated {
+  number: number; // 完了した元Issue番号
+  newIssueNumber: number; // 次周期に再作成されたIssue番号
+}
+
 export interface AddTaskInput {
   title: string;
   gtdCategory?: string;
@@ -110,9 +116,14 @@ export const api = {
    * タスクを完了する
    * @param number - Issue 番号
    * @param options.withChildren - true の場合、子タスクも全件クローズしてから親をクローズ
+   * @returns recurCreated - recur（繰り返し）設定済みタスクが完了した場合、次周期に
+   *   再作成された Issue の対応表（#1672）。recur なしの通常 done では空配列。
    */
-  doneTask: (number: number, options?: { withChildren?: boolean }): Promise<{ ok: boolean; closedChildren?: number[] }> =>
-    request<{ ok: boolean; closedChildren?: number[] }>(`/api/tasks/${number}/done`, {
+  doneTask: (
+    number: number,
+    options?: { withChildren?: boolean }
+  ): Promise<{ ok: boolean; closedChildren?: number[]; recurCreated?: RecurCreated[] }> =>
+    request<{ ok: boolean; closedChildren?: number[]; recurCreated?: RecurCreated[] }>(`/api/tasks/${number}/done`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options ?? {}),

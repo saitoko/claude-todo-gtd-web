@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, type Task, type TaskListResponse, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
+import { api, type Task, type TaskListResponse, type RecurCreated, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
+import { formatRecurNotice } from '../lib/recurNotice';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
 import AddTaskForm from '../components/AddTaskForm';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { useMobileBreakpoint } from '../hooks/useMobileBreakpoint';
+
+// recur通知の自動消去までの表示時間（ミリ秒）。#1656 の本格トースト基盤が
+// 入るまでの最小実装（画面上部に一定時間表示して自動で消える簡易通知）。
+const RECUR_NOTICE_DURATION_MS = 5000;
 
 interface Props {
   gtd: GtdKey;
@@ -232,6 +237,8 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [addFormOpen, setAddFormOpen] = useState(false);
+  const [recurNotice, setRecurNotice] = useState<string | null>(null);
+  const recurNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const cached = getCache(gtd);
@@ -282,10 +289,30 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
     await fetchTasks();
   }
 
+  /**
+   * recur再作成の通知を表示する（#1672）
+   * done() が失敗した場合は呼び出し元で catch されるため、この関数自体は
+   * 成功パスからのみ呼ばれる想定（異常系での誤発火を避ける）。
+   */
+  function showRecurNotice(recurCreated?: RecurCreated[]) {
+    const message = formatRecurNotice(recurCreated);
+    if (!message) return;
+    if (recurNoticeTimerRef.current) clearTimeout(recurNoticeTimerRef.current);
+    setRecurNotice(message);
+    recurNoticeTimerRef.current = setTimeout(() => setRecurNotice(null), RECUR_NOTICE_DURATION_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (recurNoticeTimerRef.current) clearTimeout(recurNoticeTimerRef.current);
+    };
+  }, []);
+
   async function handleDone(number: number) {
-    await api.doneTask(number);
+    const result = await api.doneTask(number);
     invalidateCache(gtd);
     await fetchTasks();
+    showRecurNotice(result.recurCreated);
   }
 
   async function handleMove(number: number, targetGtd: string) {
@@ -367,6 +394,10 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         </div>
       )}
 
+      {recurNotice && (
+        <div className="recur-notice" role="status">{recurNotice}</div>
+      )}
+
       {loading && tasks.length === 0 && <div className="loading">読み込み中...</div>}
 
       {!loading && error && (
@@ -410,6 +441,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
                 onMove={handleMove}
                 onRefresh={handleRefresh}
                 onDetail={handleDetail}
+                onRecurNotice={showRecurNotice}
               />
             ))}
           </tbody>
