@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api, ApiError } from '../lib/api';
+import { type Task, type RecurCreated, MOVABLE_GTD_KEYS, GTD_DISPLAY, api, ApiError } from '../lib/api';
 import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 import MoveDialog from './MoveDialog';
@@ -14,9 +14,11 @@ interface Props {
   /** 子タスクも含めて完了した後など、APIを再呼び出しせずリスト再フェッチだけしたいとき */
   onRefresh: () => Promise<void>;
   onDetail: (task: Task) => void;
+  /** recur再作成が起きた場合の通知表示（#1672）。未指定なら通知しない */
+  onRecurNotice?: (recurCreated?: RecurCreated[]) => void;
 }
 
-export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh, onDetail }: Props) {
+export default function ProjectTreeRow({ parent, children, onDone, onMove, onRefresh, onDetail, onRecurNotice }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [moveTarget, setMoveTarget] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,7 +61,8 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
     try {
       if (choice === 'withChildren') {
         try {
-          await api.doneTask(parent.number, { withChildren: true });
+          const result = await api.doneTask(parent.number, { withChildren: true });
+          onRecurNotice?.(result.recurCreated);
         } catch (err: unknown) {
           if (err instanceof ApiError && err.parentStillOpen === true) {
             const closed = err.closedChildren && err.closedChildren.length > 0
