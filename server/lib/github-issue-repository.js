@@ -86,13 +86,22 @@ class GitHubIssueRepository {
   /**
    * タスクを完了（Issue をクローズ）する
    *
+   * Issue #1669: 旧実装は `close-issue`（close するだけ）を呼んでいたため、
+   * recur（繰り返し）設定済みタスクを Web 版で完了しても次周期の Issue が
+   * 再作成されず、繰り返しチェーンが無言で途切れるバグがあった。
+   * `done-issue`（close + postDoneProcessing 相当の後処理）を呼ぶことで、
+   * CLI の `/todo done` と同じ recur 再作成・depends_on 昇格を行う。
+   * 子タスクにも recur が設定されている可能性があるため、親・子どちらも
+   * `done-issue` 経由にする。
+   *
    * @param {{ owner, repo, token }} tenant
    * @param {number} issueNumber
    * @param {{ withChildren?: boolean }} [options]
-   * @returns {Promise<{ closedChildren?: number[] }>}
+   * @returns {Promise<{ closedChildren?: number[], recurCreated?: Array<{ number: number, newIssueNumber: number }> }>}
    */
   async done(tenant, issueNumber, options = {}) {
     const closedChildren = [];
+    const recurCreated = [];
 
     if (options.withChildren) {
       // list-issues で全件取得し、parentProject === issueNumber の子タスクを先にクローズする
@@ -106,8 +115,11 @@ class GitHubIssueRepository {
       const failedNumbers = [];
       for (const child of children) {
         try {
-          await callEngineJson(tenant, ['close-issue', String(child.number)]);
+          const childResult = await callEngineJson(tenant, ['done-issue', String(child.number)]);
           closedChildren.push(child.number);
+          if (childResult && childResult.newIssueNumber) {
+            recurCreated.push({ number: child.number, newIssueNumber: childResult.newIssueNumber });
+          }
         } catch (err) {
           failedNumbers.push(child.number);
         }
@@ -124,9 +136,12 @@ class GitHubIssueRepository {
     }
 
     try {
-      await callEngineJson(tenant, ['close-issue', String(issueNumber)]);
+      const parentResult = await callEngineJson(tenant, ['done-issue', String(issueNumber)]);
+      if (parentResult && parentResult.newIssueNumber) {
+        recurCreated.push({ number: issueNumber, newIssueNumber: parentResult.newIssueNumber });
+      }
     } catch (parentErr) {
-      // 子は全件成功済みだが親のクローズに失敗した場合
+      // 子は全件成功済みだが親のcloseに失敗した場合
       const error = new Error(`親プロジェクト #${issueNumber} のcloseに失敗`);
       error.code = 'PARENT_CLOSE_FAILED';
       error.closedChildren = closedChildren;
@@ -134,7 +149,7 @@ class GitHubIssueRepository {
       error.cause = parentErr.message || String(parentErr);
       throw error;
     }
-    return { closedChildren };
+    return { closedChildren, recurCreated };
   }
 
   /**
