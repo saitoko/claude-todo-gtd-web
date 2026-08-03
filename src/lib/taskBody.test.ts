@@ -73,6 +73,19 @@ describe('stripControlLines', () => {
       '説明: 時刻は10:30、担当は佐藤さんです。絵文字😀も含む。'
     );
   });
+
+  it('大文字小文字非対称性の回帰: 大文字始まりの行（"Recur:"）はengineの制御行ではないため除去されず説明文として残る', () => {
+    // engine（~/.claude/todo-engine.js parseBodyObj）は小文字プレフィックスのみを
+    // 制御行として解釈する。stripControlLines がここで大文字始まりの行まで除去すると
+    // extractControlLine（大文字小文字を区別）で拾えず buildFinalBody で復元されず消失する。
+    const body = ['Recur: weekly', '', '説明文'].join('\n');
+    assert.equal(stripControlLines(body), 'Recur: weekly\n\n説明文');
+  });
+
+  it('回帰: 小文字の制御行（recur:）は引き続き表示用テキストから除去される', () => {
+    const body = ['recur: weekly', '', '説明文'].join('\n');
+    assert.equal(stripControlLines(body), '説明文');
+  });
 });
 
 // ─── buildFinalBody ──────────────────────────────────────────────────────────
@@ -143,6 +156,17 @@ describe('buildFinalBody', () => {
     const result = buildFinalBody(displayBody, rawBody, ''); // dueをクリア
     assert.equal(/^due:/m.test(result), false);
     assert.match(result, /^recur: weekly$/m);
+  });
+
+  it('大文字小文字非対称性の回帰: 大文字始まりの行（"Recur:"）はstripControlLinesで残るため、編集を経てもbuildFinalBody後に消失しない', () => {
+    // 修正前は stripControlLines が 'i' フラグで "Recur: weekly" も除去する一方、
+    // extractControlLine は大文字小文字を区別するため拾えず、buildFinalBody の
+    // 出力から "Recur: weekly" が消失していた（データ損失バグ）。
+    const rawBody = ['Recur: weekly', '', '説明文'].join('\n');
+    const displayBody = stripControlLines(rawBody);
+    const result = buildFinalBody(displayBody, rawBody, '');
+    assert.ok(result.includes('Recur: weekly'));
+    assert.ok(result.includes('説明文'));
   });
 
   it('セキュリティ/異常系: descにコロンやマルチバイト文字を含んでも制御行と誤認せず保持される', () => {

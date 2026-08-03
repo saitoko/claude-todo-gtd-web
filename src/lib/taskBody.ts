@@ -20,10 +20,15 @@ const ALL_CONTROL_PREFIXES = ['due', ...PRESERVED_CONTROL_PREFIXES] as const;
  * project: / estimate: / actual: / reviewed_at:）を除いた表示用テキストを返す。
  * engine（~/.claude/todo-engine.js parseBodyObj）が解釈する制御行を編集フォームに
  * 一切出さないことで、ユーザーが説明文と誤認して書き換え・削除する事故を防ぐ。
+ * engine の parseBodyObj は小文字プレフィックス（例: `recur: `）のみを制御行として
+ * 解釈し大文字小文字を区別するため、本関数も同じ判定基準（大文字小文字を区別する）
+ * に揃える。大文字始まりの行（例: "Recur: weekly"）は engine にとって制御行では
+ * なくただの説明文なので、ここで除去すると extractControlLine() 側で拾えず
+ * buildFinalBody() で復元されないまま消失する（過去の実バグ）。
  */
 export function stripControlLines(rawBody: string): string {
   const prefixPattern = ALL_CONTROL_PREFIXES.join('|');
-  const controlLineRegex = new RegExp(`^(${prefixPattern}):\\s*`, 'i');
+  const controlLineRegex = new RegExp(`^(${prefixPattern}):\\s*`);
   return rawBody
     .split('\n')
     .filter((line) => !controlLineRegex.test(line))
