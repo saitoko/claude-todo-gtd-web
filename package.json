@@ -12,6 +12,7 @@
     "test": "node --test server/lib/gtd-labels.test.js server/lib/github-issue-repository.test.js server/lib/engine-sync.test.js server/lib/github-issue-repository-detail.test.js server/lib/github-issue-repository-done.test.js server/routes/tasks-done.test.js",
     "test:filter": "node --experimental-strip-types --test src/lib/filterTasks.test.ts",
     "test:taskbody": "node --experimental-strip-types --test src/lib/taskBody.test.ts",
+    "test:api": "node --experimental-strip-types --test src/lib/api.test.ts",
     "test:recurnotice": "node --experimental-strip-types --test src/lib/recurNotice.test.ts"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { type Task, type RecurCreated, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
+import { type Task, type RecurCreated, MOVABLE_GTD_KEYS, GTD_DISPLAY, api, ApiError } from '../lib/api';
 import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 import MoveDialog from './MoveDialog';
@@ -64,12 +64,13 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
           const result = await api.doneTask(parent.number, { withChildren: true });
           onRecurNotice?.(result.recurCreated);
         } catch (err: unknown) {
-          const e = err as Record<string, unknown>;
-          if (e && e.parentStillOpen === true) {
-            const closed = Array.isArray(e.closedChildren) ? e.closedChildren.join(', #') : '';
+          if (err instanceof ApiError && err.parentStillOpen === true) {
+            const closed = err.closedChildren && err.closedChildren.length > 0
+              ? err.closedChildren.join(', #')
+              : '';
             const msg = closed
-              ? `子タスク (#${closed}) はclose済みです。\n親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${e.cause ?? ''}`
-              : `親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${e.cause ?? ''}`;
+              ? `子タスク (#${closed}) はclose済みです。\n親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${err.serverCause ?? ''}`
+              : `親 #${parent.number} のcloseに失敗しました。手動で再試行してください。\n原因: ${err.serverCause ?? ''}`;
             alert(msg);
           } else {
             alert(err instanceof Error ? err.message : '完了処理に失敗しました');
@@ -80,7 +81,11 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
         await onRefresh();
       } else {
         // parentOnly
-        await onDone(parent.number);
+        try {
+          await onDone(parent.number);
+        } catch (err: unknown) {
+          alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+        }
       }
     } finally {
       setBusy(false);
@@ -94,14 +99,21 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
     try {
       await onMove(parent.number, moveTarget);
       setMoveTarget('');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
     } finally {
       setBusy(false);
     }
   }
 
   async function handleSwipeMove(targetGtd: string) {
-    await onMove(parent.number, targetGtd);
-    reset();
+    try {
+      await onMove(parent.number, targetGtd);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
+    } finally {
+      reset();
+    }
   }
 
   function handleTitleClick() {
@@ -254,7 +266,11 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
                 if (hasChildren) { setShowConfirm(true); return; }
                 if (!window.confirm(`#${parent.number} を完了しますか？`)) return;
                 setBusy(true);
-                onDone(parent.number).finally(() => setBusy(false));
+                onDone(parent.number)
+                  .catch((err: unknown) => {
+                    alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+                  })
+                  .finally(() => setBusy(false));
               }}
               disabled={busy}
               title="完了（Issue クローズ）"
@@ -358,14 +374,21 @@ function ChildTaskRow({
     try {
       await onMove(task.number, moveTarget);
       setMoveTarget('');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
     } finally {
       setBusy(false);
     }
   }
 
   async function handleSwipeMove(targetGtd: string) {
-    await onMove(task.number, targetGtd);
-    reset();
+    try {
+      await onMove(task.number, targetGtd);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '移動処理に失敗しました');
+    } finally {
+      reset();
+    }
   }
 
   function handleTitleClick() {
@@ -504,7 +527,13 @@ function ChildTaskRow({
               onClick={async () => {
                 if (!window.confirm(`#${task.number} を完了しますか？`)) return;
                 setBusy(true);
-                try { await onDone(task.number); } finally { setBusy(false); }
+                try {
+                  await onDone(task.number);
+                } catch (err: unknown) {
+                  alert(err instanceof Error ? err.message : '完了処理に失敗しました');
+                } finally {
+                  setBusy(false);
+                }
               }}
               disabled={busy}
               title="完了（Issue クローズ）"
