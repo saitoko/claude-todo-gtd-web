@@ -171,6 +171,35 @@ describe('tasks routes（正常系・エラー写像）', () => {
       assert.deepEqual(json, detail);
       assert.equal(receivedNumber, 55, '文字列ではなく数値で repo に渡ること');
     });
+
+    it('repo.getDetail が due/priority/gtdCategory/parentProject を返す場合、それらもレスポンスに含まれること（Issue #1712/#1716）', async () => {
+      const detail = {
+        number: 56,
+        title: 'detail with gtd fields',
+        gtdCategory: 'next',
+        body: 'due: 2026-08-20\nproject: #10',
+        due: '2026-08-20',
+        priority: 'p2',
+        parentProject: 10,
+        labels: ['🎯 next', 'p2'],
+        assignees: ['saitoko'],
+        createdAt: '2026-08-01T00:00:00Z',
+        updatedAt: '2026-08-02T00:00:00Z',
+        comments: [],
+      };
+      await withRepo({
+        getDetail: async () => detail,
+      });
+
+      const { status, json } = await apiRequest(server, 'GET', '/api/tasks/56');
+
+      assert.equal(status, 200);
+      assert.deepEqual(json, detail, 'routes 層で due/priority/gtdCategory/parentProject が欠落・改変されずそのまま透過すること');
+      assert.equal(json.due, '2026-08-20');
+      assert.equal(json.priority, 'p2');
+      assert.equal(json.gtdCategory, 'next');
+      assert.equal(json.parentProject, 10);
+    });
   });
 
   describe('POST /api/tasks/:number/move', () => {

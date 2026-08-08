@@ -179,14 +179,19 @@ class GitHubIssueRepository {
       comments = [];
     }
 
+    // list() と同じ _normalize() を通し、due / priority / gtdCategory / parentProject を
+    // getDetail でも導出する。
+    // Issue #1712: TaskDetail 型（フロントの src/lib/api.ts）は Task を extends しており
+    // due/priority/gtdCategory/parentProject を持つと主張していたが、従来の getDetail は
+    // これらを返していなかった（型と実装の乖離）。
+    // Issue #1716: この乖離により Web UI の EditForm が task.due を常に '' で初期化し、
+    // 保存時に due 行が本文から消える（データ損失）バグが発生していた。
+    const normalized = this._normalize(issue);
+
     return {
-      number: issue.number,
-      title: issue.title,
-      body: issue.body || '',
-      labels: issue.labels.map(l => (typeof l === 'string' ? l : l.name)),
+      ...normalized,
       assignees: issue.assignees || [],
       createdAt: issue.createdAt || null,
-      updatedAt: issue.updatedAt || null,
       comments,
     };
   }
