@@ -127,7 +127,15 @@ describe('tasks routes（正常系・エラー写像）', () => {
 
       await apiRequest(server, 'POST', '/api/tasks', { title: '  余白あり  ' });
 
-      assert.deepEqual(received, { title: '余白あり', gtdCategory: 'inbox' });
+      // Issue #1656 以降、due/priority/ctx は未指定時も repo.add へ
+      // undefined として明示的に渡る（値そのものは従来どおり未設定）
+      assert.deepEqual(received, {
+        title: '余白あり',
+        gtdCategory: 'inbox',
+        due: undefined,
+        priority: undefined,
+        ctx: undefined,
+      });
     });
 
     it('gtdCategory を指定するとそのカテゴリで作成されること', async () => {
