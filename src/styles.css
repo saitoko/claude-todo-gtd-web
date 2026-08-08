@@ -296,7 +296,8 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding-left: 72px; /* .add-task-form の #列オフセットに揃える */
+  /* 親 .add-task-form が既に padding-left:72px を持つため、ここでは指定しない
+     （指定すると #列オフセットが二重に効いて詳細欄だけ右にずれる） */
 }
 
 .add-task-details select,
