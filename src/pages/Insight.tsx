@@ -437,6 +437,7 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
           task={activeTask}
           onClose={() => setActiveTask(null)}
           onSaved={() => { invalidateCache(); setRefreshKey((k) => k + 1); }}
+          onMove={(number, targetGtd) => handleMove(number, targetGtd, activeTask.gtdCategory)}
         />
       )}
     </div>

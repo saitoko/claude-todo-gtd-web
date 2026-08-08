@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api, type Task, type TaskDetail } from '../lib/api';
 import EditForm from './EditForm';
+import MoveDialog from './MoveDialog';
 import { useMobileBreakpoint } from '../hooks/useMobileBreakpoint';
+import { resolveTaskDetailEscapeAction } from '../lib/taskDetailEscape';
 
 interface Props {
   task: Task;
   onClose: () => void;
   onSaved?: () => void;
+  onMove: (number: number, targetGtd: string) => Promise<void>;
 }
 
 function formatJST(isoString: string | null): string {
@@ -22,11 +25,12 @@ function formatJST(isoString: string | null): string {
   }).format(new Date(isoString));
 }
 
-export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
+export default function TaskDetailModal({ task, onClose, onSaved, onMove }: Props) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const isMobile = useMobileBreakpoint();
 
   useEffect(() => {
@@ -54,8 +58,11 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        if (editMode) {
+        const action = resolveTaskDetailEscapeAction({ editMode, showMoveDialog });
+        if (action === 'cancelEdit') {
           setEditMode(false);
+        } else if (action === 'closeMoveDialog') {
+          setShowMoveDialog(false);
         } else {
           onClose();
         }
@@ -63,7 +70,7 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, editMode]);
+  }, [onClose, editMode, showMoveDialog]);
 
   // モバイル: ボトムシート風レイアウト
   // PC: 従来のセンタリングモーダル
@@ -116,6 +123,15 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
                     title="編集"
                   >
                     ✏️ 編集
+                  </button>
+                )}
+                {!editMode && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowMoveDialog(true)}
+                    title="GTDカテゴリを移動"
+                  >
+                    ➡️ 移動
                   </button>
                 )}
                 <button
@@ -214,6 +230,27 @@ export default function TaskDetailModal({ task, onClose, onSaved }: Props) {
                   <button className="btn btn-ghost" onClick={onClose}>閉じる</button>
                 </div>
               </>
+            )}
+
+            {showMoveDialog && (
+              <MoveDialog
+                taskNumber={detail.number}
+                /*
+                 * currentGtd は detail ではなく task（一覧由来）から取る。
+                 * detail.gtdCategory は Issue #1712 以降 `string | null` であり、
+                 * GTD ラベルが1つも付いていない Issue では null になりうる。
+                 * 一方 task は list() 由来で、list() は gtdCategory が null の Issue を
+                 * 除外して返すため非 null が保証されている。
+                 * MoveDialog の currentGtd は「現在のカテゴリを移動先から除外する」
+                 * フィルタのキーなので、null が入るとフィルタが効かなくなる。
+                 */
+                currentGtd={task.gtdCategory}
+                onMove={async (targetGtd) => {
+                  await onMove(detail.number, targetGtd);
+                  onClose();
+                }}
+                onClose={() => setShowMoveDialog(false)}
+              />
             )}
           </>
         )}

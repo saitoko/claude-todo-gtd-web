@@ -183,6 +183,7 @@ export default function Focus({ getCache, setCache, invalidateCache }: Props) {
           task={activeTask}
           onClose={() => setActiveTask(null)}
           onSaved={() => { invalidateCache(); setRefreshKey((k) => k + 1); }}
+          onMove={handleMove}
         />
       )}
     </div>
