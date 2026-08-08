@@ -26,18 +26,20 @@ export interface TaskComment {
   createdAt: string;
 }
 
-export interface TaskDetail extends Task {
-  // 注意（Issue #1712）: gtdCategory は Task から継承した `string`（非 null）のまま
-  // 据え置いている。list() は getGtdCategory が null を返す Issue（GTD ラベル漏れ）を
-  // 除外して返すため Task.gtdCategory は実運用上ほぼ非 null だが、getDetail は個別
-  // Issue を無条件に返すため、GTD ラベルが一切付いていない Issue の詳細を取得すると
-  // 実行時には null になりうる（サーバー側 _normalize() の gtdCategory 参照）。
-  // ここを `string | null` に広げると Task 側も連動させる必要があり
-  // （TaskDetailModal.tsx が `<EditForm task={detail} />` で TaskDetail を Task として
-  // 渡している、GTD_DISPLAY[task.gtdCategory] 等のインデックスアクセスが多数派生する）、
-  // 本バグ修正のスコープを超えて影響範囲が広がるため据え置いた。ラベル漏れ Issue は
-  // list() 側のコメントが言う「CLI で気づける」対象であり、通常運用では発生しない
-  // 想定の既知のエッジケースとして扱う。
+/**
+ * タスク詳細（GET /api/tasks/:number のレスポンス）。
+ *
+ * Issue #1712: gtdCategory だけ Task の `string` を `string | null` に上書きしている。
+ * list() は getGtdCategory が null を返す Issue（GTD ラベル漏れ）を除外して返すため
+ * Task.gtdCategory は非 null だが、getDetail は個別 Issue を無条件に返すので、
+ * GTD ラベルが1つも付いていない Issue では実行時に null になりうる
+ * （サーバー側 github-issue-repository.js の _normalize() 参照）。
+ *
+ * 「型が実態を保証しない」状態こそが Issue #1716（編集保存で due が消えるデータ損失）の
+ * 原因だったため、エッジケースであっても型を実態に合わせる。
+ */
+export interface TaskDetail extends Omit<Task, 'gtdCategory'> {
+  gtdCategory: string | null;
   assignees: string[];
   createdAt: string;
   updatedAt: string;
