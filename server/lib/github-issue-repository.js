@@ -168,6 +168,44 @@ class GitHubIssueRepository {
   }
 
   /**
+   * done() を取り消す（Issue を再オープンする）
+   *
+   * Issue #1656: 完了直後の「元に戻す」トースト用。done() が完了対象 Issue
+   * 自身に対して行う変更は state: closed のみ（ラベル・due・priority・body は
+   * 変更されない）ため、reopen-issue を呼ぶだけで元Issue自身は完全に復元できる。
+   * recur による次周期Issue作成・depends_on昇格は完了対象Issueとは別のIssueへの
+   * 副作用であり、reopen-issue では取り消せない。次周期Issueについては
+   * recurCreatedNumber が渡された場合に限り close-issue で追って閉じる
+   * （close-issue は done-issue と異なり postDoneProcessing を呼ばないため、
+   * さらなる recur 連鎖は起きない）。depends_on昇格の取り消しは対象外
+   * （どのIssueが昇格したかのデータがAPIに存在せず技術的に不可能）。
+   *
+   * @param {{ owner, repo, token }} tenant
+   * @param {number} issueNumber - 再オープンしたい元Issue番号
+   * @param {{ recurCreatedNumber?: number }} [options] - done時にrecurで再作成された
+   *   次周期Issueの番号。指定時はそのIssueも合わせてクローズする
+   * @returns {Promise<{ ok: true, recurCloseFailed?: true }>}
+   */
+  async undoDone(tenant, issueNumber, options = {}) {
+    // ①元Issueの再オープンを先に実行する。ここが失敗したら即座に例外を投げ、
+    // 呼び出し元(routes層)のhandleError()経由でエラーレスポンスを返す。
+    await callEngineJson(tenant, ['reopen-issue', String(issueNumber)]);
+
+    // ②recurCreatedNumberが指定されていれば、次周期Issueもクローズする。
+    // ①が成功した後の処理であり、②が失敗しても①の成功は無かったことにしない
+    // （部分失敗を明示するrecurCloseFailedフラグで返す。既存のCHILD_CLOSE_FAILED等と同じ方針）。
+    if (options.recurCreatedNumber) {
+      try {
+        await callEngineJson(tenant, ['close-issue', String(options.recurCreatedNumber)]);
+      } catch (_err) {
+        return { ok: true, recurCloseFailed: true };
+      }
+    }
+
+    return { ok: true };
+  }
+
+  /**
    * タスクの詳細情報（担当者・コメントを含む）を取得する
    *
    * @param {{ owner, repo, token }} tenant

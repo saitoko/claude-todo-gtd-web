@@ -508,16 +508,6 @@ th.th-sorted { color: var(--color-accent); }
 
 .error { color: var(--color-danger); }
 
-/* recur再作成の簡易通知（#1672）。#1656 の本格トースト基盤が入るまでの暫定実装 */
-.recur-notice {
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  border-radius: 6px;
-  background: var(--color-gtd-next-bg);
-  color: var(--color-gtd-next-fg);
-  font-size: 13px;
-}
-
 /* ページヘッダー */
 .page-header {
   display: flex;
@@ -912,6 +902,71 @@ th.th-sorted { color: var(--color-accent); }
   padding: 1px 6px;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ===== トースト（完了Undo等、#1656） ===== */
+
+/* z-index 1100: .modal-overlay(1000) / .mobile-fab-sheet-overlay(300) より上。
+   トーストはユーザー操作の直接的なフィードバックであり、常に見える必要があるため
+   既存の最大z-index（モーダル系1000）より一段上に置く */
+.toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-fg-base);
+  box-shadow: var(--shadow-modal);
+  font-size: 13px;
+  animation: toastSlideIn 0.2s ease;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-action {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.toast-action:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .toast-stack {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    /* .mobile-tab-bar（高さ56px, z-index:100固定bottom）と重ならないよう上に配置 */
+    bottom: calc(56px + 12px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ===== 確認ダイアログ（モーダル） ===== */

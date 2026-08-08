@@ -4,6 +4,7 @@ import CategoryNav from './components/CategoryNav';
 import MobileTabBar from './components/MobileTabBar';
 import MobileFab from './components/MobileFab';
 import MobileListsDrawer from './components/MobileListsDrawer';
+import ToastStack from './components/ToastStack';
 import List from './pages/List';
 import Search from './pages/Search';
 import Focus from './pages/Focus';
@@ -11,6 +12,7 @@ import Insight from './pages/Insight';
 import ErrorBoundary from './components/ErrorBoundary';
 import { GTD_KEYS, type GtdKey, type TaskListResponse, type AddTaskInput, api } from './lib/api';
 import { useTaskCache } from './lib/useTaskCache';
+import { useToast, type ToastInput } from './lib/useToast';
 import { useMobileBreakpoint } from './hooks/useMobileBreakpoint';
 
 const GTD_KEY_SET = new Set<string>(GTD_KEYS);
@@ -25,12 +27,14 @@ function ListRoute({
   getCache,
   setCache,
   invalidateCache,
+  pushToast,
 }: {
   byCategory: Record<string, number>;
   onCategoryChange: (bc: Record<string, number>) => void;
   getCache: (gtd: GtdKey) => TaskListResponse | null;
   setCache: (gtd: GtdKey, data: TaskListResponse) => void;
   invalidateCache: (gtd?: GtdKey) => void;
+  pushToast: (input: ToastInput) => string;
 }) {
   const { gtd } = useParams<{ gtd: string }>();
   if (!isGtdKey(gtd)) {
@@ -43,6 +47,7 @@ function ListRoute({
       getCache={getCache}
       setCache={setCache}
       invalidateCache={invalidateCache}
+      pushToast={pushToast}
     />
   );
 }
@@ -50,6 +55,7 @@ function ListRoute({
 export default function App() {
   const [byCategory, setByCategory] = useState<Record<string, number>>({});
   const { getCache, setCache, invalidateCache } = useTaskCache();
+  const { toasts, pushToast, dismissToast } = useToast();
   const isMobile = useMobileBreakpoint();
   const [fabOpen, setFabOpen] = useState(false);
   const [listsDrawerOpen, setListsDrawerOpen] = useState(false);
@@ -79,6 +85,7 @@ export default function App() {
                 getCache={getCache}
                 setCache={setCache}
                 invalidateCache={invalidateCache}
+                pushToast={pushToast}
               />
             }
           />
@@ -86,7 +93,7 @@ export default function App() {
             path="/search"
             element={
               <ErrorBoundary>
-                <Search getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} />
+                <Search getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} pushToast={pushToast} />
               </ErrorBoundary>
             }
           />
@@ -94,7 +101,7 @@ export default function App() {
             path="/focus"
             element={
               <ErrorBoundary>
-                <Focus getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} />
+                <Focus getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} pushToast={pushToast} />
               </ErrorBoundary>
             }
           />
@@ -102,7 +109,7 @@ export default function App() {
             path="/insight"
             element={
               <ErrorBoundary>
-                <Insight getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} />
+                <Insight getCache={getCache} setCache={setCache} invalidateCache={invalidateCache} pushToast={pushToast} />
               </ErrorBoundary>
             }
           />
@@ -134,6 +141,9 @@ export default function App() {
           onAdd={handleFabAdd}
         />
       )}
+
+      {/* 完了Undoトースト等（#1656） */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

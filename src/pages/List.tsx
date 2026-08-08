@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, type Task, type TaskListResponse, type RecurCreated, type AddTaskInput, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
@@ -10,10 +10,13 @@ import ProjectTreeRow from '../components/ProjectTreeRow';
 import AddTaskForm from '../components/AddTaskForm';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { useMobileBreakpoint } from '../hooks/useMobileBreakpoint';
+import type { ToastInput } from '../lib/useToast';
 
-// recur通知の自動消去までの表示時間（ミリ秒）。#1656 の本格トースト基盤が
-// 入るまでの最小実装（画面上部に一定時間表示して自動で消える簡易通知）。
-const RECUR_NOTICE_DURATION_MS = 5000;
+// 完了Undoトーストの表示時間（ミリ秒）。タップ操作の余地を確保するため
+// 情報のみのトーストより長めに取る（#1656）。
+const UNDO_TOAST_DURATION_MS = 6000;
+// 情報のみ（Undoボタンなし）のトーストの表示時間（ミリ秒）。旧 RECUR_NOTICE_DURATION_MS を踏襲。
+const INFO_TOAST_DURATION_MS = 5000;
 
 interface Props {
   gtd: GtdKey;
@@ -21,6 +24,7 @@ interface Props {
   getCache: (gtd: GtdKey) => TaskListResponse | null;
   setCache: (gtd: GtdKey, data: TaskListResponse) => void;
   invalidateCache: (gtd?: GtdKey) => void;
+  pushToast: (input: ToastInput) => string;
 }
 
 const GTD_ORDER: Record<string, number> = {
@@ -206,7 +210,7 @@ function EmptyState({ gtd }: { gtd: string }) {
   );
 }
 
-export default function List({ gtd, onCategoryChange, getCache, setCache, invalidateCache }: Props) {
+export default function List({ gtd, onCategoryChange, getCache, setCache, invalidateCache, pushToast }: Props) {
   const navigate = useNavigate();
   const isMobile = useMobileBreakpoint();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -217,8 +221,6 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [addFormOpen, setAddFormOpen] = useState(false);
-  const [recurNotice, setRecurNotice] = useState<string | null>(null);
-  const recurNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const cached = getCache(gtd);
@@ -270,29 +272,49 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
   }
 
   /**
-   * recur再作成の通知を表示する（#1672）
-   * done() が失敗した場合は呼び出し元で catch されるため、この関数自体は
-   * 成功パスからのみ呼ばれる想定（異常系での誤発火を避ける）。
+   * project の「子タスクも全部完了する」実行後の通知（#1656）。
+   * withChildren:true は onDone prop を経由しない別経路のため Undo 対象外
+   * （どの子が実際にrecur再作成されたか個別に扱う必要がありUI・APIとも複雑化するため）。
+   * 情報のみのトースト（actionLabel/onAction を省略 = Undoボタンなし）を出す。
    */
-  function showRecurNotice(recurCreated?: RecurCreated[]) {
+  function handleRecurNotice(recurCreated?: RecurCreated[]) {
     const message = formatRecurNotice(recurCreated);
     if (!message) return;
-    if (recurNoticeTimerRef.current) clearTimeout(recurNoticeTimerRef.current);
-    setRecurNotice(message);
-    recurNoticeTimerRef.current = setTimeout(() => setRecurNotice(null), RECUR_NOTICE_DURATION_MS);
+    pushToast({ message, durationMs: INFO_TOAST_DURATION_MS });
   }
 
-  useEffect(() => {
-    return () => {
-      if (recurNoticeTimerRef.current) clearTimeout(recurNoticeTimerRef.current);
-    };
-  }, []);
+  /**
+   * 完了Undo（#1656）。①元Issueをreopen ②recurCreatedNumberがあれば次周期Issueをclose。
+   * gtdAtDoneTime は done 実行時点の gtd を固定で保持する
+   * （Undo実行時にページ遷移していても、完了時に属していたカテゴリのキャッシュを正しく無効化するため）。
+   */
+  async function handleUndoDone(number: number, recurCreatedNumber: number | undefined, gtdAtDoneTime: GtdKey) {
+    try {
+      const result = await api.undoDoneTask(number, recurCreatedNumber);
+      invalidateCache(gtdAtDoneTime);
+      await fetchTasks();
+      if (result.recurCloseFailed) {
+        alert(`#${number} は元に戻しましたが、次周期タスク #${recurCreatedNumber} のクローズに失敗しました。手動で確認してください。`);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '元に戻す処理に失敗しました');
+    }
+  }
 
   async function handleDone(number: number) {
     const result = await api.doneTask(number);
     invalidateCache(gtd);
     await fetchTasks();
-    showRecurNotice(result.recurCreated);
+
+    const recur = (result.recurCreated ?? []).find((rc) => rc.number === number);
+    pushToast({
+      message: recur
+        ? `#${number} を完了しました。次周期のタスク #${recur.newIssueNumber} を作成しました`
+        : `#${number} を完了しました`,
+      actionLabel: '元に戻す',
+      onAction: () => handleUndoDone(number, recur?.newIssueNumber, gtd),
+      durationMs: UNDO_TOAST_DURATION_MS,
+    });
   }
 
   async function handleMove(number: number, targetGtd: string) {
@@ -374,10 +396,6 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
         </div>
       )}
 
-      {recurNotice && (
-        <div className="recur-notice" role="status">{recurNotice}</div>
-      )}
-
       {loading && tasks.length === 0 && <div className="loading">読み込み中...</div>}
 
       {!loading && error && (
@@ -421,7 +439,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
                 onMove={handleMove}
                 onRefresh={handleRefresh}
                 onDetail={handleDetail}
-                onRecurNotice={showRecurNotice}
+                onRecurNotice={handleRecurNotice}
               />
             ))}
           </tbody>

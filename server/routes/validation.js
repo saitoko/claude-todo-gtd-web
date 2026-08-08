@@ -197,6 +197,23 @@ function validateOptionalCtxArray(value, fieldName) {
   return base;
 }
 
+/**
+ * 正の整数（number型）を任意フィールドとして検証する（Issue #1656）
+ * undo-done の recurCreatedNumber 用。JSON body由来なので値は既に number 型で届く
+ * （URLパラメータの文字列パースとは別枠）。
+ *
+ * @param {unknown} value
+ * @param {string} fieldName
+ * @returns {{ ok: true, value: number | undefined } | { ok: false, body: object }}
+ */
+function validateOptionalPositiveInteger(value, fieldName) {
+  if (value === undefined || value === null) return ok(undefined);
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    return ng(`${fieldName} は正の整数で指定してください`, typeName(value));
+  }
+  return ok(value);
+}
+
 module.exports = {
   ISSUE_NUMBER_PATTERN,
   typeName,
@@ -207,4 +224,5 @@ module.exports = {
   validateOptionalDue,
   validateOptionalPriority,
   validateOptionalCtxArray,
+  validateOptionalPositiveInteger,
 };

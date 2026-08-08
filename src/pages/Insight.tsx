@@ -9,11 +9,16 @@ import {
 import { sortTasks } from '../lib/sortTasks';
 import TaskRow from '../components/TaskRow';
 import TaskDetailModal from '../components/TaskDetailModal';
+import type { ToastInput } from '../lib/useToast';
+
+// 完了Undoトーストの表示時間（ミリ秒）。List.tsx と同じ値（#1656）。
+const UNDO_TOAST_DURATION_MS = 6000;
 
 interface Props {
   getCache: (gtd: GtdKey) => TaskListResponse | null;
   setCache: (gtd: GtdKey, data: TaskListResponse) => void;
   invalidateCache: (gtd?: GtdKey) => void;
+  pushToast: (input: ToastInput) => string;
 }
 
 interface FetchState {
@@ -25,7 +30,7 @@ interface FetchState {
 const INITIAL_FETCH_STATE: FetchState = { tasks: [], loading: true, error: null };
 const SECTION_LIMIT = 10;
 
-export default function Insight({ getCache, setCache, invalidateCache }: Props) {
+export default function Insight({ getCache, setCache, invalidateCache, pushToast }: Props) {
   const [nextState, setNextState] = useState<FetchState>(INITIAL_FETCH_STATE);
   const [waitingState, setWaitingState] = useState<FetchState>(INITIAL_FETCH_STATE);
   const [somedayState, setSomedayState] = useState<FetchState>(INITIAL_FETCH_STATE);
@@ -130,10 +135,34 @@ export default function Insight({ getCache, setCache, invalidateCache }: Props) 
     [categoryReview.waitingNoDue]
   );
 
+  /** 完了Undo（#1656）。①元Issueをreopen ②recurCreatedNumberがあれば次周期Issueをclose */
+  async function handleUndoDone(number: number, recurCreatedNumber: number | undefined, gtdAtDoneTime: string) {
+    try {
+      const result = await api.undoDoneTask(number, recurCreatedNumber);
+      invalidateCache(gtdAtDoneTime as GtdKey);
+      setRefreshKey((k) => k + 1);
+      if (result.recurCloseFailed) {
+        alert(`#${number} は元に戻しましたが、次周期タスク #${recurCreatedNumber} のクローズに失敗しました。手動で確認してください。`);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '元に戻す処理に失敗しました');
+    }
+  }
+
   async function handleDone(number: number, gtdCategory: string) {
-    await api.doneTask(number);
+    const result = await api.doneTask(number);
     invalidateCache(gtdCategory as GtdKey);
     setRefreshKey((k) => k + 1);
+
+    const recur = (result.recurCreated ?? []).find((rc) => rc.number === number);
+    pushToast({
+      message: recur
+        ? `#${number} を完了しました。次周期のタスク #${recur.newIssueNumber} を作成しました`
+        : `#${number} を完了しました`,
+      actionLabel: '元に戻す',
+      onAction: () => handleUndoDone(number, recur?.newIssueNumber, gtdCategory),
+      durationMs: UNDO_TOAST_DURATION_MS,
+    });
   }
 
   async function handleMove(number: number, targetGtd: string, currentGtd: string) {

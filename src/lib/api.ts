@@ -238,6 +238,21 @@ export const api = {
     }),
 
   /**
+   * done() を取り消す（Issue を再オープンする）（#1656）
+   * @param number - 再オープンする元Issue番号
+   * @param recurCreatedNumber - done時にrecurで再作成された次周期Issueの番号（あれば併せてクローズする）
+   */
+  undoDoneTask: (
+    number: number,
+    recurCreatedNumber?: number
+  ): Promise<{ ok: boolean; recurCloseFailed?: boolean }> =>
+    request<{ ok: boolean; recurCloseFailed?: boolean }>(`/api/tasks/${number}/undo-done`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(recurCreatedNumber !== undefined ? { recurCreatedNumber } : {}),
+    }),
+
+  /**
    * タスクの GTD カテゴリを変更する
    */
   moveTask: (number: number, targetGtd: string): Promise<{ ok: boolean }> =>
