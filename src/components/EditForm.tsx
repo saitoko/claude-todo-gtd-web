@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { api, type Task } from '../lib/api';
+import { api, type TaskDetail } from '../lib/api';
 import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 
 interface EditFormProps {
-  task: Task;
+  // 呼び出し元は TaskDetailModal の1箇所のみで、渡ってくるのは常に getTaskDetail の
+  // 戻り値（TaskDetail）。Task ではなく TaskDetail を受けることで、詳細レスポンス由来の
+  // 値であることを型で明示する（Issue #1712）。
+  task: TaskDetail;
   onSave: () => Promise<void>;
   onCancel: () => void;
 }

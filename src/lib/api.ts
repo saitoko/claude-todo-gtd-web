@@ -26,7 +26,20 @@ export interface TaskComment {
   createdAt: string;
 }
 
-export interface TaskDetail extends Task {
+/**
+ * タスク詳細（GET /api/tasks/:number のレスポンス）。
+ *
+ * Issue #1712: gtdCategory だけ Task の `string` を `string | null` に上書きしている。
+ * list() は getGtdCategory が null を返す Issue（GTD ラベル漏れ）を除外して返すため
+ * Task.gtdCategory は非 null だが、getDetail は個別 Issue を無条件に返すので、
+ * GTD ラベルが1つも付いていない Issue では実行時に null になりうる
+ * （サーバー側 github-issue-repository.js の _normalize() 参照）。
+ *
+ * 「型が実態を保証しない」状態こそが Issue #1716（編集保存で due が消えるデータ損失）の
+ * 原因だったため、エッジケースであっても型を実態に合わせる。
+ */
+export interface TaskDetail extends Omit<Task, 'gtdCategory'> {
+  gtdCategory: string | null;
   assignees: string[];
   createdAt: string;
   updatedAt: string;
