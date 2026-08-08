@@ -236,12 +236,13 @@ export default function TaskDetailModal({ task, onClose, onSaved, onMove }: Prop
               <MoveDialog
                 taskNumber={detail.number}
                 /*
-                 * currentGtd は detail ではなく task（一覧由来）から取ること。
-                 * TaskDetail は型の上では Task を extends しているが、
-                 * GET /api/tasks/:number（server/lib/github-issue-repository.js の getDetail）は
-                 * gtdCategory / due / priority / parentProject を返さない。
-                 * detail.gtdCategory は型エラーにならないまま実行時に undefined になり、
-                 * MoveDialog の「現在のカテゴリを移動先から除外する」フィルタが効かなくなる。
+                 * currentGtd は detail ではなく task（一覧由来）から取る。
+                 * detail.gtdCategory は Issue #1712 以降 `string | null` であり、
+                 * GTD ラベルが1つも付いていない Issue では null になりうる。
+                 * 一方 task は list() 由来で、list() は gtdCategory が null の Issue を
+                 * 除外して返すため非 null が保証されている。
+                 * MoveDialog の currentGtd は「現在のカテゴリを移動先から除外する」
+                 * フィルタのキーなので、null が入るとフィルタが効かなくなる。
                  */
                 currentGtd={task.gtdCategory}
                 onMove={async (targetGtd) => {
