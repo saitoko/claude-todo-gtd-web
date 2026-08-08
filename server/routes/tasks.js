@@ -11,6 +11,7 @@ const {
   validateOptionalDue,
   validateOptionalPriority,
   validateOptionalCtxArray,
+  validateOptionalPositiveInteger,
 } = require('./validation');
 
 const router = express.Router();
@@ -140,6 +141,32 @@ router.post('/tasks/:number/done', async (req, res) => {
 
     const result = await repo.done(req._tenant, num, { withChildren });
     res.json({ ok: true, closedChildren: result.closedChildren, recurCreated: result.recurCreated });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+/**
+ * POST /api/tasks/:number/undo-done
+ * done() の取り消し（Issue再オープン）。Issue #1656 の完了Undoトースト用。
+ * recurCreatedNumber が渡された場合、done() 実行時にrecurで再作成された
+ * 次周期Issueも合わせてクローズする（元Issueを再オープンしただけでは
+ * 「完了ボタンを押す前」の状態に戻らないため）。
+ * Body: { recurCreatedNumber?: number }
+ * Response: { ok: true, recurCloseFailed?: true }
+ */
+router.post('/tasks/:number/undo-done', async (req, res) => {
+  try {
+    const parsed = parseIssueNumber(req.params.number);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const num = parsed.value;
+
+    const { recurCreatedNumber } = req.body || {};
+    const typedRecurNum = validateOptionalPositiveInteger(recurCreatedNumber, 'recurCreatedNumber');
+    if (!typedRecurNum.ok) return res.status(400).json(typedRecurNum.body);
+
+    const result = await repo.undoDone(req._tenant, num, { recurCreatedNumber: typedRecurNum.value });
+    res.json(result);
   } catch (err) {
     handleError(res, err);
   }
