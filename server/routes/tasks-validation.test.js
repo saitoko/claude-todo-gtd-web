@@ -323,3 +323,90 @@ describe('routes 型検証 400 ガード', () => {
     });
   });
 });
+
+/**
+ * ガードが「正当な入力まで弾いていないこと」を確認する。
+ * 400 ガードのテストだけだと過剰な拒否に気づけないため、
+ * 型検証を通過すべき入力を同じファイル内で対にして押さえておく。
+ */
+describe('型検証を通過する正当な入力', () => {
+  let server;
+  let lastDone;
+  let lastAdd;
+  let lastUpdate;
+
+  before(async () => {
+    mockRepository({
+      done: async (_tenant, num, options) => {
+        lastDone = { num, options };
+        return { closedChildren: [], recurCreated: [] };
+      },
+      add: async (_tenant, input) => {
+        lastAdd = input;
+        return { number: 1 };
+      },
+      update: async (_tenant, num, patch) => {
+        lastUpdate = { num, patch };
+      },
+      getDetail: async (_tenant, num) => ({ number: num, title: 't', labels: [], comments: [] }),
+    });
+    server = await startTestServer();
+  });
+
+  after(async () => {
+    if (server) await stopTestServer(server);
+    restoreRepository();
+  });
+
+  it('withChildren: true はそのまま repo.done へ渡ること', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks/10/done', {
+      withChildren: true,
+    });
+    assert.equal(status, 200);
+    assert.equal(lastDone.options.withChildren, true);
+  });
+
+  it('withChildren: false はそのまま repo.done へ渡ること', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks/10/done', {
+      withChildren: false,
+    });
+    assert.equal(status, 200);
+    assert.equal(lastDone.options.withChildren, false);
+  });
+
+  it('withChildren 未指定は false になること', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks/10/done', {});
+    assert.equal(status, 200);
+    assert.equal(lastDone.options.withChildren, false);
+  });
+
+  it('Issue 番号の最小値 1 が通ること（境界値）', async () => {
+    const { status, json } = await apiRequest(server, 'GET', '/api/tasks/1');
+    assert.equal(status, 200);
+    assert.equal(json.number, 1);
+  });
+
+  it('マルチバイト・絵文字を含むタイトルが通り、全角スペースが trim されること', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks', {
+      title: '　日本語タイトル 🎉　',
+    });
+    assert.equal(status, 201);
+    assert.equal(lastAdd.title, '日本語タイトル 🎉', 'U+3000（全角スペース）も trim 対象');
+  });
+
+  it('GTD カテゴリ以外の絵文字入りラベルは通ること（過剰拒否していないこと）', async () => {
+    const { status } = await apiRequest(server, 'PATCH', '/api/tasks/20', {
+      addLabels: ['@🏠 自宅', 'p1'],
+    });
+    assert.equal(status, 200);
+    assert.deepEqual(lastUpdate.patch.addLabels, ['@🏠 自宅', 'p1']);
+  });
+
+  it('全角スペースのみのラベルは 400 で弾かれること（trim の境界）', async () => {
+    const { status, json } = await apiRequest(server, 'PATCH', '/api/tasks/20', {
+      addLabels: ['　'],
+    });
+    assert.equal(status, 400);
+    assert.match(json.error, /空のラベル名/);
+  });
+});

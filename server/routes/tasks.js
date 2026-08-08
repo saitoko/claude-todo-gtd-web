@@ -192,6 +192,10 @@ router.get('/gtd-labels', (_req, res) => {
  * PATCH /api/tasks/:number
  * タスクの属性を更新する
  * Body: { title?, body?, addLabels?, removeLabels? }
+ *
+ * 契約変更（Issue #1658）: 更新対象フィールドが1つもないリクエストは
+ * 400 を返す。従来は engine を呼ばずに 200 `{ ok: true }` を返しており、
+ * クライアントからは「保存された」と区別がつかなかった。
  */
 router.patch('/tasks/:number', async (req, res) => {
   try {

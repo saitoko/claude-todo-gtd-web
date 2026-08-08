@@ -6,8 +6,11 @@
  * routes 層だけを検証したいので、GitHubIssueRepository（= engine サブプロセス
  * 呼び出し）をモジュールキャッシュ差し替えでモックし、ephemeral port に立てた
  * express app へ実際に HTTP リクエストを投げる。
- * ミドルウェア構成（express.json / req._tenant 注入 / '/api' マウント）は
- * server/index.js の本番構成と揃えてある。
+ *
+ * ミドルウェア構成は server/index.js の本番構成から authMiddleware と cors を
+ * 除いたもの（express.json / req._tenant 注入 / '/api' マウント）。
+ * 認証・CORS はここでは検証対象外なので、本ハーネスを通ったテストを
+ * 「認証込みで検証済み」と読まないこと。
  *
  * 使い方:
  *   mockRepository({ list: async () => ({ tasks: [] }) });
