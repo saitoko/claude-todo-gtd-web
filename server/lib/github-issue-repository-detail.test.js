@@ -19,11 +19,13 @@ const repoPath = path.resolve(__dirname, 'github-issue-repository.js');
 const TENANT = { owner: 'test-owner', repo: 'test-repo', token: 'test-token' };
 
 // 正常系の issue 詳細レスポンス（view-issue-detail 相当）
+// due / project 制御行と p2 ラベルを含め、_normalize() 経由での
+// due/priority/gtdCategory/parentProject 抽出を検証できるようにする（Issue #1712/#1716）。
 const ISSUE_DETAIL = {
   number: 42,
   title: 'テストタスク',
-  body: 'due: 2026-05-01',
-  labels: [{ name: '📥 inbox' }],
+  body: 'due: 2026-05-01\nproject: #10\n\n本文メモ',
+  labels: [{ name: '📥 inbox' }, { name: 'p2' }],
   assignees: ['user-a', 'user-b'],
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-04-24T10:00:00Z',
@@ -89,8 +91,8 @@ describe('GitHubIssueRepository.getDetail', () => {
 
     assert.equal(detail.number, 42);
     assert.equal(detail.title, 'テストタスク');
-    assert.equal(detail.body, 'due: 2026-05-01');
-    assert.deepEqual(detail.labels, ['📥 inbox']);
+    assert.equal(detail.body, 'due: 2026-05-01\nproject: #10\n\n本文メモ');
+    assert.deepEqual(detail.labels, ['📥 inbox', 'p2']);
     assert.deepEqual(detail.assignees, ['user-a', 'user-b']);
     assert.equal(detail.createdAt, '2026-01-01T00:00:00Z');
     assert.equal(detail.updatedAt, '2026-04-24T10:00:00Z');
@@ -98,6 +100,37 @@ describe('GitHubIssueRepository.getDetail', () => {
     assert.equal(detail.comments[0].author, 'user-a');
     assert.equal(detail.comments[1].body, 'コメント2');
     assert.equal(callCount, 2, 'engine が 2 回呼ばれること');
+
+    // Issue #1712/#1716: getDetail が _normalize() 経由で due/priority/gtdCategory/
+    // parentProject を返すこと（従来はこれらが欠落し EditForm の due 初期値が常に
+    // '' になって保存時に due が消滅するデータ損失バグの原因だった）
+    assert.equal(detail.due, '2026-05-01', 'body の due: 行から due が抽出されること');
+    assert.equal(detail.priority, 'p2', 'p2 ラベルから priority が抽出されること');
+    assert.equal(detail.gtdCategory, 'inbox', '📥 inbox ラベルから gtdCategory が抽出されること');
+    assert.equal(detail.parentProject, 10, 'body の project: #10 行から parentProject が抽出されること');
+  });
+
+  it('GTD ラベルが付いていない issue: gtdCategory は null、due/project 行がない body では due/parentProject も null', async () => {
+    const noLabelIssue = {
+      ...ISSUE_DETAIL,
+      body: '本文メモのみ',
+      labels: [{ name: '@personal' }],
+    };
+    mockEngineClient(async (_tenant, subArgs) => {
+      if (subArgs[0] === 'view-issue-detail') return noLabelIssue;
+      if (subArgs[0] === 'list-comments') return [];
+      throw new Error(`予期しないサブコマンド: ${subArgs[0]}`);
+    });
+
+    const { GitHubIssueRepository } = require('./github-issue-repository');
+    const repo = new GitHubIssueRepository();
+    const detail = await repo.getDetail(TENANT, 42);
+
+    assert.equal(detail.gtdCategory, null, 'GTD ラベルが1つもない場合 gtdCategory は null');
+    assert.equal(detail.due, null, 'due: 行がない body では due は null');
+    assert.equal(detail.priority, null, 'p1/p2/p3 ラベルがない場合 priority は null');
+    assert.equal(detail.parentProject, null, 'project: 行がない body では parentProject は null');
+    assert.deepEqual(detail.labels, ['@personal']);
   });
 
   it('コメント取得失敗時: comments: [] を返し、他フィールドは正常', async () => {
@@ -115,6 +148,12 @@ describe('GitHubIssueRepository.getDetail', () => {
     assert.equal(detail.title, 'テストタスク');
     assert.deepEqual(detail.comments, [], 'コメント失敗時は空配列');
     assert.deepEqual(detail.assignees, ['user-a', 'user-b'], '担当者は正常に返る');
+    // コメント取得失敗時も _normalize() の結果（due/priority/gtdCategory/parentProject）は
+    // list-comments の失敗と独立に正常に返ること
+    assert.equal(detail.due, '2026-05-01');
+    assert.equal(detail.priority, 'p2');
+    assert.equal(detail.gtdCategory, 'inbox');
+    assert.equal(detail.parentProject, 10);
   });
 
   it('view-issue-detail 失敗時: throw する', async () => {
