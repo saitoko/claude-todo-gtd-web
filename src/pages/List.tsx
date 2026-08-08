@@ -470,6 +470,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
           task={detailTask}
           onClose={() => setDetailTask(null)}
           onSaved={handleRefresh}
+          onMove={handleMove}
         />
       )}
     </div>
