@@ -10,73 +10,32 @@
  * 反映されること」を実際に express ルーターへリクエストを送って検証する。
  *
  * github-issue-repository モジュールをモジュールキャッシュ差し替えでモックする
- * （github-issue-repository-done.test.js と同じ手法）。
+ * （github-issue-repository-done.test.js と同じ手法）。ハーネス本体は
+ * route-test-utils.js に共通化してある（Issue #1658）。
  */
 
 const { describe, it, after, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
-const express = require('express');
 
-const repoModulePath = path.resolve(__dirname, '../lib/github-issue-repository.js');
-const routesModulePath = path.resolve(__dirname, 'tasks.js');
+const {
+  mockRepository,
+  restoreRepository,
+  startTestServer,
+  stopTestServer,
+  apiRequest,
+} = require('./route-test-utils');
 
 /** repo.done() の戻り値/挙動を差し替えて router を読み込み直す */
 function mockRepoDone(doneImpl) {
-  delete require.cache[repoModulePath];
-  delete require.cache[routesModulePath];
-  require.cache[repoModulePath] = {
-    id: repoModulePath,
-    filename: repoModulePath,
-    loaded: true,
-    exports: {
-      GitHubIssueRepository: class {
-        async done(_tenant, issueNumber, options) {
-          return doneImpl(issueNumber, options);
-        }
-      },
-    },
-    children: [],
-    paths: [],
-    parent: null,
-  };
-}
-
-function restoreRepoModule() {
-  delete require.cache[repoModulePath];
-  delete require.cache[routesModulePath];
-}
-
-/** モックした tasks.js router を使い、ephemeral port で express app を起動する */
-function startTestServer() {
-  delete require.cache[routesModulePath];
-  // eslint-disable-next-line global-require
-  const { router } = require('./tasks');
-  const app = express();
-  app.use(express.json());
-  app.use((req, _res, next) => {
-    req._tenant = { owner: 'test-owner', repo: 'test-repo', token: 'test-token' };
-    next();
-  });
-  app.use('/api', router);
-  return new Promise((resolve) => {
-    const server = app.listen(0, '127.0.0.1', () => resolve(server));
+  mockRepository({
+    done: async (_tenant, issueNumber, options) => doneImpl(issueNumber, options),
   });
 }
 
-function stopTestServer(server) {
-  return new Promise((resolve) => server.close(resolve));
-}
+const restoreRepoModule = restoreRepository;
 
-async function postDone(server, number, body) {
-  const { port } = server.address();
-  const res = await fetch(`http://127.0.0.1:${port}/api/tasks/${number}/done`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body ?? {}),
-  });
-  const json = await res.json().catch(() => null);
-  return { status: res.status, json };
+function postDone(server, number, body) {
+  return apiRequest(server, 'POST', `/api/tasks/${number}/done`, body ?? {});
 }
 
 describe('POST /api/tasks/:number/done ルート', () => {

@@ -3,6 +3,12 @@
 const express = require('express');
 const { GitHubIssueRepository } = require('../lib/github-issue-repository');
 const { GTD_LABELS, PROJECT_LABEL, GTD_DISPLAY_JA, normLabel } = require('../lib/gtd-labels');
+const {
+  parseIssueNumber,
+  validateString,
+  validateOptionalBoolean,
+  validateLabelArray,
+} = require('./validation');
 
 const router = express.Router();
 const repo = new GitHubIssueRepository();
@@ -16,7 +22,14 @@ const VALID_GTD_KEYS = new Set(GTD_LABELS);
  */
 router.get('/tasks', async (req, res) => {
   try {
-    const gtdFilter = req.query.gtd || null;
+    const rawGtd = req.query.gtd;
+    if (rawGtd !== undefined) {
+      // `?gtd[]=x` 等でオブジェクト・配列が来た場合を弾く（express の qs パーサー）
+      const typed = validateString(rawGtd, 'gtd');
+      if (!typed.ok) return res.status(400).json(typed.body);
+    }
+
+    const gtdFilter = rawGtd || null;
     if (gtdFilter && !VALID_GTD_KEYS.has(gtdFilter) && gtdFilter !== PROJECT_LABEL) {
       return res.status(400).json({ error: '無効な gtd カテゴリです', detail: gtdFilter });
     }
@@ -38,8 +51,18 @@ router.post('/tasks', async (req, res) => {
   try {
     const { title, gtdCategory } = req.body || {};
 
-    if (!title || !title.trim()) {
+    if (title === undefined || title === null) {
       return res.status(400).json({ error: 'タイトルが空です' });
+    }
+    const typedTitle = validateString(title, 'title');
+    if (!typedTitle.ok) return res.status(400).json(typedTitle.body);
+    if (!title.trim()) {
+      return res.status(400).json({ error: 'タイトルが空です' });
+    }
+
+    if (gtdCategory !== undefined && gtdCategory !== null) {
+      const typedGtd = validateString(gtdCategory, 'gtdCategory');
+      if (!typedGtd.ok) return res.status(400).json(typedGtd.body);
     }
 
     const gtdKey = gtdCategory || 'inbox';
@@ -60,10 +83,10 @@ router.post('/tasks', async (req, res) => {
  */
 router.get('/tasks/:number', async (req, res) => {
   try {
-    const num = parseInt(req.params.number, 10);
-    if (!num || num <= 0) {
-      return res.status(400).json({ error: '無効な Issue 番号です' });
-    }
+    const parsed = parseIssueNumber(req.params.number);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const num = parsed.value;
+
     const result = await repo.getDetail(req._tenant, num);
     res.json(result);
   } catch (err) {
@@ -82,12 +105,18 @@ router.get('/tasks/:number', async (req, res) => {
  */
 router.post('/tasks/:number/done', async (req, res) => {
   try {
-    const num = parseInt(req.params.number, 10);
-    if (!num || num <= 0) {
-      return res.status(400).json({ error: '無効な Issue 番号です' });
-    }
+    const parsed = parseIssueNumber(req.params.number);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const num = parsed.value;
 
-    const withChildren = !!(req.body && req.body.withChildren);
+    const typedWithChildren = validateOptionalBoolean(
+      (req.body || {}).withChildren,
+      'withChildren',
+      false
+    );
+    if (!typedWithChildren.ok) return res.status(400).json(typedWithChildren.body);
+    const withChildren = typedWithChildren.value;
+
     const result = await repo.done(req._tenant, num, { withChildren });
     res.json({ ok: true, closedChildren: result.closedChildren, recurCreated: result.recurCreated });
   } catch (err) {
@@ -102,15 +131,16 @@ router.post('/tasks/:number/done', async (req, res) => {
  */
 router.post('/tasks/:number/move', async (req, res) => {
   try {
-    const num = parseInt(req.params.number, 10);
-    if (!num || num <= 0) {
-      return res.status(400).json({ error: '無効な Issue 番号です' });
-    }
+    const parsed = parseIssueNumber(req.params.number);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const num = parsed.value;
 
     const { targetGtd } = req.body || {};
-    if (!targetGtd) {
+    if (targetGtd === undefined || targetGtd === null || targetGtd === '') {
       return res.status(400).json({ error: 'targetGtd が指定されていません' });
     }
+    const typedTarget = validateString(targetGtd, 'targetGtd');
+    if (!typedTarget.ok) return res.status(400).json(typedTarget.body);
 
     // project への move は engine 側で禁止されているが、ここでも弾く
     if (targetGtd === PROJECT_LABEL) {
@@ -162,18 +192,40 @@ router.get('/gtd-labels', (_req, res) => {
  * PATCH /api/tasks/:number
  * タスクの属性を更新する
  * Body: { title?, body?, addLabels?, removeLabels? }
+ *
+ * 契約変更（Issue #1658）: 更新対象フィールドが1つもないリクエストは
+ * 400 を返す。従来は engine を呼ばずに 200 `{ ok: true }` を返しており、
+ * クライアントからは「保存された」と区別がつかなかった。
  */
 router.patch('/tasks/:number', async (req, res) => {
   try {
-    const num = parseInt(req.params.number, 10);
-    if (!num || num <= 0) {
-      return res.status(400).json({ error: '無効な Issue 番号です' });
-    }
+    const parsed = parseIssueNumber(req.params.number);
+    if (!parsed.ok) return res.status(400).json(parsed.body);
+    const num = parsed.value;
 
     const { title, body, addLabels, removeLabels } = req.body || {};
 
-    if (title !== undefined && !title.trim()) {
-      return res.status(400).json({ error: 'タイトルは1文字以上必要です' });
+    if (title !== undefined) {
+      const typedTitle = validateString(title, 'title');
+      if (!typedTitle.ok) return res.status(400).json(typedTitle.body);
+      if (!title.trim()) {
+        return res.status(400).json({ error: 'タイトルは1文字以上必要です' });
+      }
+    }
+
+    if (body !== undefined) {
+      const typedBody = validateString(body, 'body');
+      if (!typedBody.ok) return res.status(400).json(typedBody.body);
+    }
+
+    if (addLabels !== undefined) {
+      const typedAdd = validateLabelArray(addLabels, 'addLabels');
+      if (!typedAdd.ok) return res.status(400).json(typedAdd.body);
+    }
+
+    if (removeLabels !== undefined) {
+      const typedRemove = validateLabelArray(removeLabels, 'removeLabels');
+      if (!typedRemove.ok) return res.status(400).json(typedRemove.body);
     }
 
     // GTDカテゴリラベルのガード
@@ -192,6 +244,15 @@ router.patch('/tasks/:number', async (req, res) => {
     if (body !== undefined) patch.body = body;
     if (addLabels && addLabels.length > 0) patch.addLabels = addLabels;
     if (removeLabels && removeLabels.length > 0) patch.removeLabels = removeLabels;
+
+    // 更新対象が1つもない PATCH は engine を呼ばず何もせず 200 を返していたため、
+    // クライアント側から「保存できた」と誤認できた。明示的に 400 で弾く。
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({
+        error: '更新するフィールドがありません',
+        detail: 'title / body / addLabels / removeLabels のいずれかを指定してください',
+      });
+    }
 
     await repo.update(req._tenant, num, patch);
     res.json({ ok: true });
