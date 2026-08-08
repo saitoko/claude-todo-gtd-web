@@ -105,6 +105,79 @@ describe('routes 型検証 400 ガード', () => {
       assert.equal(status, 400);
       assert.equal(json.detail, 'project');
     });
+
+    // ── due/priority/ctx（Issue #1656: タスク追加時の詳細入力） ──
+
+    it('due がスラッシュ区切り（2026/08/10）だと 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        due: '2026/08/10',
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /due は YYYY-MM-DD 形式/);
+    });
+
+    it('due が形式は合うが実在しない日付（2026-13-40）でも 400 にならないこと（正規表現のみで検証する設計方針の明示）', async () => {
+      const { status } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        due: '2026-13-40',
+      });
+      assert.notEqual(status, 400);
+    });
+
+    it('due が数値だと 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        due: 20260810,
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /due は文字列/);
+    });
+
+    it('priority が p4 だと 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        priority: 'p4',
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /priority は p1\/p2\/p3/);
+    });
+
+    it('priority が数値だと 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        priority: 1,
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /priority は文字列/);
+    });
+
+    it('ctx の要素が @ で始まらない（home）と 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        ctx: ['home'],
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /ctx の要素は @ で始まる/);
+    });
+
+    it('ctx が文字列の配列でない（オブジェクト）と 400 になること', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        ctx: { home: true },
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /ctx は文字列の配列/);
+    });
+
+    it('ctx に空文字要素があると 400 になること（validateLabelArray委譲分）', async () => {
+      const { status, json } = await apiRequest(server, 'POST', '/api/tasks', {
+        title: 'ok',
+        ctx: ['@home', '  '],
+      });
+      assert.equal(status, 400);
+      assert.match(json.error, /空のラベル名/);
+    });
   });
 
   describe(':number パラメータの厳密パース', () => {
@@ -408,5 +481,28 @@ describe('型検証を通過する正当な入力', () => {
     });
     assert.equal(status, 400);
     assert.match(json.error, /空のラベル名/);
+  });
+
+  // ── due/priority/ctx（Issue #1656）: リグレッション・正常受け渡しの確認 ──
+
+  it('due/priority/ctx すべて未指定でも 201 になること（既存動作のリグレッション確認）', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks', { title: 'no details' });
+    assert.equal(status, 201);
+    assert.equal(lastAdd.due, undefined);
+    assert.equal(lastAdd.priority, undefined);
+    assert.equal(lastAdd.ctx, undefined);
+  });
+
+  it('due/priority/ctx すべて指定すると 201 になり、repo.add に正しい形で渡ること', async () => {
+    const { status } = await apiRequest(server, 'POST', '/api/tasks', {
+      title: 'with details',
+      due: '2026-08-10',
+      priority: 'p2',
+      ctx: ['@home', '@errand'],
+    });
+    assert.equal(status, 201);
+    assert.equal(lastAdd.due, '2026-08-10');
+    assert.equal(lastAdd.priority, 'p2');
+    assert.deepEqual(lastAdd.ctx, ['@home', '@errand']);
   });
 });

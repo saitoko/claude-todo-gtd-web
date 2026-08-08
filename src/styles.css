@@ -248,6 +248,7 @@ h2 {
 
 .add-task-form {
   display: flex;
+  flex-wrap: wrap; /* 詳細欄(.add-task-details)を新しい行に折り返すため（#1656） */
   flex: 1;
   gap: 8px;
   align-items: center;
@@ -281,6 +282,39 @@ h2 {
   font: inherit;
   background: var(--color-bg-card);
   color: var(--color-fg-base);
+}
+
+/* タスク追加フォームの詳細入力欄（期日・優先度・ctx。#1656、既定で折りたたみ） */
+.add-task-details-toggle {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.add-task-details {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  /* 親 .add-task-form が既に padding-left:72px を持つため、ここでは指定しない
+     （指定すると #列オフセットが二重に効いて詳細欄だけ右にずれる） */
+}
+
+.add-task-details select,
+.add-task-details input[type="date"] {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font: inherit;
+  background: var(--color-bg-card);
+  color: var(--color-fg-base);
+}
+
+.add-task-ctx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 /* テーブル */
@@ -1676,6 +1710,21 @@ tr:hover .task-actions-inline {
 
   .mobile-fab-sheet .add-task-controls .btn[type="submit"]:disabled {
     opacity: 0.5;
+  }
+
+  /* ボトムシート内の詳細入力欄（#1656）も縦積みレイアウトに揃える */
+  .mobile-fab-sheet .add-task-details {
+    flex-direction: column;
+    align-items: stretch;
+    padding-left: 0;
+  }
+
+  .mobile-fab-sheet .add-task-details select,
+  .mobile-fab-sheet .add-task-details input[type="date"] {
+    width: 100%;
+    height: 44px;
+    font-size: 16px; /* iOS auto-zoom 防止 */
+    padding: 10px 12px;
   }
 }
 

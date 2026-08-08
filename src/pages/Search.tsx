@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api, GTD_DISPLAY, GTD_KEYS, type GtdKey, type Task, type TaskListResponse } from '../lib/api';
+import { api, GTD_DISPLAY, GTD_KEYS, type GtdKey, type Task, type TaskListResponse, type AddTaskInput } from '../lib/api';
 import { useSearch } from '../lib/useSearch';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
 import AddTaskForm from '../components/AddTaskForm';
@@ -90,9 +90,9 @@ export default function Search({ getCache, setCache, invalidateCache }: Props) {
     setRefreshKey(k => k + 1);
   }
 
-  async function handleAdd(title: string, gtdCategory: string) {
-    await api.addTask({ title, gtdCategory });
-    invalidateCache(gtdCategory as GtdKey);
+  async function handleAdd(input: AddTaskInput) {
+    await api.addTask(input);
+    invalidateCache((input.gtdCategory ?? 'inbox') as GtdKey);
     setRefreshKey(k => k + 1);
   }
 

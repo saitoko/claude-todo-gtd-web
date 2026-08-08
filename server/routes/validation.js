@@ -130,6 +130,73 @@ function validateLabelArray(value, fieldName) {
   return ok(value);
 }
 
+// due 入力として許可する形式（YYYY-MM-DD のみ。CLI の M/D 短縮形や 'clear' は非対応、#1656）
+const DUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// priority ラベルとして許可する値（事前作成済みのラベルのみを前提とする、#1656）
+const VALID_PRIORITIES = new Set(['p1', 'p2', 'p3']);
+
+/**
+ * due（期日）フィールドを検証する（Issue #1656: タスク追加時の詳細入力）
+ * `<input type="date">` が常に YYYY-MM-DD を出力する前提で、正規表現のみで検証する
+ * （カレンダー妥当性は検証しない。2026-13-40 のような形式一致の不正日付は通過する）。
+ *
+ * @param {unknown} value
+ * @param {string} fieldName
+ * @returns {{ ok: true, value: string | undefined } | { ok: false, body: object }}
+ */
+function validateOptionalDue(value, fieldName) {
+  if (value === undefined || value === null || value === '') return ok(undefined);
+  if (typeof value !== 'string') {
+    return ng(`${fieldName} は文字列で指定してください`, typeName(value));
+  }
+  if (!DUE_DATE_PATTERN.test(value)) {
+    return ng(`${fieldName} は YYYY-MM-DD 形式で指定してください`, value);
+  }
+  return ok(value);
+}
+
+/**
+ * priority フィールドを検証する（Issue #1656）
+ * p1/p2/p3 のみ許可する（ラベルは常に事前作成済みという既存前提を踏襲、ensureLabel 相当は行わない）。
+ *
+ * @param {unknown} value
+ * @param {string} fieldName
+ * @returns {{ ok: true, value: string | undefined } | { ok: false, body: object }}
+ */
+function validateOptionalPriority(value, fieldName) {
+  if (value === undefined || value === null || value === '') return ok(undefined);
+  if (typeof value !== 'string') {
+    return ng(`${fieldName} は文字列で指定してください`, typeName(value));
+  }
+  if (!VALID_PRIORITIES.has(value)) {
+    return ng(`${fieldName} は p1/p2/p3 のいずれかで指定してください`, value);
+  }
+  return ok(value);
+}
+
+/**
+ * ctx（コンテキスト、`@` ラベル）配列を検証する（Issue #1656）
+ * 要素の型・空文字・カンマ検証は validateLabelArray に委譲し、加えて各要素が
+ * `@` で始まることを検証する。既存ラベルのみを選択させる前提のため未存在ラベルの
+ * 自動作成（ensureLabel 相当）は行わない。
+ *
+ * @param {unknown} value
+ * @param {string} fieldName
+ * @returns {{ ok: true, value: string[] | undefined } | { ok: false, body: object }}
+ */
+function validateOptionalCtxArray(value, fieldName) {
+  if (value === undefined || value === null) return ok(undefined);
+  const base = validateLabelArray(value, fieldName);
+  if (!base.ok) return base;
+  for (let i = 0; i < base.value.length; i += 1) {
+    if (!base.value[i].startsWith('@')) {
+      return ng(`${fieldName} の要素は @ で始まる必要があります`, `${fieldName}[${i}]: ${base.value[i]}`);
+    }
+  }
+  return base;
+}
+
 module.exports = {
   ISSUE_NUMBER_PATTERN,
   typeName,
@@ -137,4 +204,7 @@ module.exports = {
   validateString,
   validateOptionalBoolean,
   validateLabelArray,
+  validateOptionalDue,
+  validateOptionalPriority,
+  validateOptionalCtxArray,
 };

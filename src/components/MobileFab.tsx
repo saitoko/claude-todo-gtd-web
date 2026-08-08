@@ -1,10 +1,11 @@
 import { createPortal } from 'react-dom';
 import AddTaskForm from './AddTaskForm';
+import type { AddTaskInput } from '../lib/api';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onAdd: (title: string, gtdCategory: string) => Promise<void>;
+  onAdd: (input: AddTaskInput) => Promise<void>;
 }
 
 /**
@@ -35,8 +36,8 @@ export default function MobileFab({ open, onClose, onAdd }: Props) {
         <div className="mobile-fab-sheet-handle" />
         <div className="mobile-fab-sheet-title">タスクを追加</div>
         <AddTaskForm
-          onAdd={async (title, gtdCategory) => {
-            await onAdd(title, gtdCategory);
+          onAdd={async (input) => {
+            await onAdd(input);
             onClose();
           }}
         />

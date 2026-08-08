@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, type Task, type TaskListResponse, type RecurCreated, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
+import { api, type Task, type TaskListResponse, type RecurCreated, type AddTaskInput, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
 import { partitionByDate } from '../lib/partitionByDate';
@@ -262,9 +262,9 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
     }
   }
 
-  async function handleAdd(title: string, gtdCategory: string) {
-    await api.addTask({ title, gtdCategory });
-    invalidateCache(gtdCategory as GtdKey);
+  async function handleAdd(input: AddTaskInput) {
+    await api.addTask(input);
+    invalidateCache((input.gtdCategory ?? 'inbox') as GtdKey);
     invalidateCache(gtd);
     await fetchTasks();
   }
@@ -367,7 +367,7 @@ export default function List({ gtd, onCategoryChange, getCache, setCache, invali
       {!isMobile && (
         <div className={`add-task-row${addFormOpen ? ' open' : ''}`}>
           <AddTaskForm
-            onAdd={async (...args) => { await handleAdd(...args); setAddFormOpen(false); }}
+            onAdd={async (input) => { await handleAdd(input); setAddFormOpen(false); }}
             onRefresh={handleRefresh}
             onSearch={() => navigate('/search')}
           />

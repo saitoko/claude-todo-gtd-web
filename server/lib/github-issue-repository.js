@@ -59,19 +59,34 @@ class GitHubIssueRepository {
   /**
    * タスクを追加する
    *
+   * Issue #1656: due/priority/ctx を指定できる（いずれも省略可、従来どおり動作する）。
+   * - due: `~/.claude/todo-engine.js` の buildBody() と同じ形式（`due: YYYY-MM-DD\n`）で
+   *   body 先頭に書き込む
+   * - priority: p1/p2/p3 ラベルとして直接付与する（ensureLabel 相当は行わない。
+   *   p1/p2/p3 ラベルは常に事前存在している前提。既存の優先度インライン編集と同じ前提）
+   * - ctx: `@` 始まりのラベルとして直接付与する（既存ラベルのみを選択させるフロント側の
+   *   制約により、未存在ラベルを渡す経路は存在しない前提）
+   *
    * @param {{ owner, repo, token }} tenant
-   * @param {{ title: string, gtdCategory?: string }} input
+   * @param {{ title: string, gtdCategory?: string, due?: string, priority?: string, ctx?: string[] }} input
    * @returns {Promise<{ number: number }>}
    */
   async add(tenant, input) {
     const { GTD_DISPLAY } = require('./gtd-labels');
     const gtdKey = input.gtdCategory || 'inbox';
-    const label = GTD_DISPLAY[gtdKey];
+    const gtdLabel = GTD_DISPLAY[gtdKey];
+
+    const labels = [];
+    if (gtdLabel) labels.push(gtdLabel);
+    if (input.priority) labels.push(input.priority);
+    if (input.ctx && input.ctx.length > 0) labels.push(...input.ctx);
+
+    const body = input.due ? `due: ${input.due}\n` : '';
 
     const issueInput = {
       title: input.title,
-      body: '',
-      labels: label ? [label] : [],
+      body,
+      labels,
     };
 
     const result = await callEngineJson(

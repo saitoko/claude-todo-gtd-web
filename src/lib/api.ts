@@ -55,6 +55,9 @@ export interface RecurCreated {
 export interface AddTaskInput {
   title: string;
   gtdCategory?: string;
+  due?: string; // 'YYYY-MM-DD'（#1656）
+  priority?: string; // 'p1' | 'p2' | 'p3'（#1656）
+  ctx?: string[]; // ['@home', ...]（'@'込みの文字列、既存ラベルのみ、#1656）
 }
 
 // 有効な GTD カテゴリ

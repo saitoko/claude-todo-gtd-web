@@ -8,6 +8,9 @@ const {
   validateString,
   validateOptionalBoolean,
   validateLabelArray,
+  validateOptionalDue,
+  validateOptionalPriority,
+  validateOptionalCtxArray,
 } = require('./validation');
 
 const router = express.Router();
@@ -45,11 +48,14 @@ router.get('/tasks', async (req, res) => {
 /**
  * POST /api/tasks
  * タスクを追加する
- * Body: { title: string, gtdCategory?: string }
+ * Body: { title: string, gtdCategory?: string, due?: string, priority?: string, ctx?: string[] }
+ *
+ * Issue #1656: due（YYYY-MM-DD）/priority（p1/p2/p3）/ctx（`@`ラベル、既存ラベルのみ）を
+ * 追加時に指定できるようにする。いずれも未指定なら従来どおりの挙動（非破壊）。
  */
 router.post('/tasks', async (req, res) => {
   try {
-    const { title, gtdCategory } = req.body || {};
+    const { title, gtdCategory, due, priority, ctx } = req.body || {};
 
     if (title === undefined || title === null) {
       return res.status(400).json({ error: 'タイトルが空です' });
@@ -70,7 +76,22 @@ router.post('/tasks', async (req, res) => {
       return res.status(400).json({ error: '無効な gtdCategory です', detail: gtdKey });
     }
 
-    const result = await repo.add(req._tenant, { title: title.trim(), gtdCategory: gtdKey });
+    const typedDue = validateOptionalDue(due, 'due');
+    if (!typedDue.ok) return res.status(400).json(typedDue.body);
+
+    const typedPriority = validateOptionalPriority(priority, 'priority');
+    if (!typedPriority.ok) return res.status(400).json(typedPriority.body);
+
+    const typedCtx = validateOptionalCtxArray(ctx, 'ctx');
+    if (!typedCtx.ok) return res.status(400).json(typedCtx.body);
+
+    const result = await repo.add(req._tenant, {
+      title: title.trim(),
+      gtdCategory: gtdKey,
+      due: typedDue.value,
+      priority: typedPriority.value,
+      ctx: typedCtx.value,
+    });
     res.status(201).json(result);
   } catch (err) {
     handleError(res, err);

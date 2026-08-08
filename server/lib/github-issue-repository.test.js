@@ -4,8 +4,9 @@
 // engine-client をモックなしでテストできる。ただし require 時点で engine-client が
 // require されるため、callEngineJson が呼ばれる前にテストが終わる形にする。
 
-const { describe, it } = require('node:test');
+const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const { GitHubIssueRepository } = require('./github-issue-repository');
 
 const repo = new GitHubIssueRepository();
@@ -115,4 +116,105 @@ describe('GitHubIssueRepository._normalize', () => {
     assert.equal(task.updatedAt, null);
   });
 
+});
+
+// ─── add() テスト（Issue #1656: due/priority/ctx 対応） ───
+// callEngineJson をモジュールキャッシュ差し替えでモックする
+// （github-issue-repository-done.test.js と同じ手法）。
+
+describe('GitHubIssueRepository.add', () => {
+  const engineClientPath = path.resolve(__dirname, 'engine-client.js');
+  const repoPath = path.resolve(__dirname, 'github-issue-repository.js');
+  const TENANT = { owner: 'test-owner', repo: 'test-repo', token: 'test-token' };
+
+  function mockEngineClient(impl) {
+    require.cache[engineClientPath] = {
+      id: engineClientPath,
+      filename: engineClientPath,
+      loaded: true,
+      exports: {
+        callEngine: async () => '',
+        callEngineJson: impl,
+        getTodayJST: () => '2026-08-08',
+      },
+      children: [],
+      paths: [],
+      parent: null,
+    };
+    delete require.cache[repoPath];
+  }
+
+  function restoreEngineClient() {
+    delete require.cache[engineClientPath];
+    delete require.cache[repoPath];
+  }
+
+  beforeEach(() => {
+    restoreEngineClient();
+  });
+
+  it('due 指定時、create-issue に渡す ISSUE_INPUT_ENV の body が "due: 2026-08-10\\n" になること', async () => {
+    let capturedEnv;
+    mockEngineClient(async (_tenant, subArgs, env) => {
+      capturedEnv = env;
+      if (subArgs[0] === 'create-issue') return { number: 1 };
+      throw new Error(`予期しないサブコマンド: ${subArgs[0]}`);
+    });
+
+    const { GitHubIssueRepository: Repo } = require('./github-issue-repository');
+    const r = new Repo();
+    await r.add(TENANT, { title: 'タイトル', gtdCategory: 'inbox', due: '2026-08-10' });
+
+    const issueInput = JSON.parse(capturedEnv.ISSUE_INPUT_ENV);
+    assert.equal(issueInput.body, 'due: 2026-08-10\n');
+  });
+
+  it('priority 指定時、labels 配列に "p1" が含まれること', async () => {
+    let capturedEnv;
+    mockEngineClient(async (_tenant, subArgs, env) => {
+      capturedEnv = env;
+      if (subArgs[0] === 'create-issue') return { number: 2 };
+      throw new Error(`予期しないサブコマンド: ${subArgs[0]}`);
+    });
+
+    const { GitHubIssueRepository: Repo } = require('./github-issue-repository');
+    const r = new Repo();
+    await r.add(TENANT, { title: 'タイトル', gtdCategory: 'inbox', priority: 'p1' });
+
+    const issueInput = JSON.parse(capturedEnv.ISSUE_INPUT_ENV);
+    assert.ok(issueInput.labels.includes('p1'));
+  });
+
+  it('ctx 指定時、labels 配列に "@home" が含まれること', async () => {
+    let capturedEnv;
+    mockEngineClient(async (_tenant, subArgs, env) => {
+      capturedEnv = env;
+      if (subArgs[0] === 'create-issue') return { number: 3 };
+      throw new Error(`予期しないサブコマンド: ${subArgs[0]}`);
+    });
+
+    const { GitHubIssueRepository: Repo } = require('./github-issue-repository');
+    const r = new Repo();
+    await r.add(TENANT, { title: 'タイトル', gtdCategory: 'inbox', ctx: ['@home'] });
+
+    const issueInput = JSON.parse(capturedEnv.ISSUE_INPUT_ENV);
+    assert.ok(issueInput.labels.includes('@home'));
+  });
+
+  it('due/priority/ctx すべて未指定時、既存動作（body:\'\'、labelsはgtdラベルのみ）が変わらないこと（リグレッション）', async () => {
+    let capturedEnv;
+    mockEngineClient(async (_tenant, subArgs, env) => {
+      capturedEnv = env;
+      if (subArgs[0] === 'create-issue') return { number: 4 };
+      throw new Error(`予期しないサブコマンド: ${subArgs[0]}`);
+    });
+
+    const { GitHubIssueRepository: Repo } = require('./github-issue-repository');
+    const r = new Repo();
+    await r.add(TENANT, { title: 'タイトル', gtdCategory: 'inbox' });
+
+    const issueInput = JSON.parse(capturedEnv.ISSUE_INPUT_ENV);
+    assert.equal(issueInput.body, '');
+    assert.deepEqual(issueInput.labels, ['📥 inbox']);
+  });
 });

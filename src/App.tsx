@@ -9,7 +9,7 @@ import Search from './pages/Search';
 import Focus from './pages/Focus';
 import Insight from './pages/Insight';
 import ErrorBoundary from './components/ErrorBoundary';
-import { GTD_KEYS, type GtdKey, type TaskListResponse, api } from './lib/api';
+import { GTD_KEYS, type GtdKey, type TaskListResponse, type AddTaskInput, api } from './lib/api';
 import { useTaskCache } from './lib/useTaskCache';
 import { useMobileBreakpoint } from './hooks/useMobileBreakpoint';
 
@@ -58,9 +58,9 @@ export default function App() {
     setByCategory(bc);
   }, []);
 
-  async function handleFabAdd(title: string, gtdCategory: string) {
-    await api.addTask({ title, gtdCategory });
-    invalidateCache(gtdCategory as GtdKey);
+  async function handleFabAdd(input: AddTaskInput) {
+    await api.addTask(input);
+    invalidateCache((input.gtdCategory ?? 'inbox') as GtdKey);
     invalidateCache();
   }
 
