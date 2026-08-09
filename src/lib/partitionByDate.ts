@@ -12,6 +12,20 @@ export interface PartitionedTasks {
 }
 
 /**
+ * タスクが期限超過（overdue）かどうかを判定する
+ *
+ * #1674: partitionByDate() 内の overdue フィルタと、モバイルカード単体（MobileTaskCard）の
+ * 期限超過表示判定が同じ式 `due != null && due < today` を別々に持っていた（重複）。
+ * 本関数を唯一の判定ロジックとし、両方の呼び出し元から共通利用する。
+ *
+ * @param task - 判定対象のタスク
+ * @param today - 基準日（'YYYY-MM-DD'形式、JST）
+ */
+export function isTaskOverdue(task: Task, today: string): boolean {
+  return task.due != null && task.due < today;
+}
+
+/**
  * タスクを「期限超過」「今日」「明日以降」「期日なし」のセクションに分割する
  *
  * #1649: 従来は today/future/noDue の3バケツしかなく、due < today（期限超過）の
@@ -22,7 +36,7 @@ export interface PartitionedTasks {
  * @param today - 基準日（'YYYY-MM-DD'形式、JST）。省略時は実行時点のJST日付
  */
 export function partitionByDate(tasks: Task[], today: string = getTodayJST()): PartitionedTasks {
-  const overdue = tasks.filter((t) => t.due != null && t.due < today);
+  const overdue = tasks.filter((t) => isTaskOverdue(t, today));
   const todayTasks = tasks.filter((t) => t.due === today);
   const future = tasks.filter((t) => t.due != null && t.due > today);
   const noDue = tasks.filter((t) => t.due == null);

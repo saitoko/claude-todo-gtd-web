@@ -9,7 +9,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { partitionByDate } from './partitionByDate.ts';
+import { partitionByDate, isTaskOverdue } from './partitionByDate.ts';
 import { type Task } from './api.ts';
 
 // ─── テストデータファクトリ ──────────────────────────────────────────────────
@@ -141,5 +141,29 @@ describe('partitionByDate', () => {
     const result = partitionByDate([], BASE_TODAY);
     assert.equal(result.todayLabel, `今日（${BASE_TODAY}）`);
     assert.equal(result.futureLabel, '明日以降（2026-08-04〜）');
+  });
+});
+
+// ─── isTaskOverdue（#1674: overdue判定ロジックの重複解消） ─────────────────────
+
+describe('isTaskOverdue', () => {
+  it('境界値: due が null の場合、false を返す（期日なしタスクは期限超過にならない）', () => {
+    const task = makeTask({ number: 1, due: null });
+    assert.equal(isTaskOverdue(task, BASE_TODAY), false);
+  });
+
+  it('境界値: due が today と同日の場合、false を返す（当日は期限超過ではない）', () => {
+    const task = makeTask({ number: 1, due: BASE_TODAY });
+    assert.equal(isTaskOverdue(task, BASE_TODAY), false);
+  });
+
+  it('境界値: due が前日の場合、true を返す（期限超過と判定される）', () => {
+    const task = makeTask({ number: 1, due: '2026-08-02' });
+    assert.equal(isTaskOverdue(task, BASE_TODAY), true);
+  });
+
+  it('境界値: due が翌日の場合、false を返す（未来の期日は期限超過ではない）', () => {
+    const task = makeTask({ number: 1, due: '2026-08-04' });
+    assert.equal(isTaskOverdue(task, BASE_TODAY), false);
   });
 });

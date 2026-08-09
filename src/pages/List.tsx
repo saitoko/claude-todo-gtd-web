@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { api, type Task, type TaskListResponse, type RecurCreated, type AddTaskInput, GTD_DISPLAY, type GtdKey, getGtdEmoji } from '../lib/api';
 import { getRandomTip } from '../lib/gtd-tips';
 import { sortTasks, type SortKey } from '../lib/sortTasks';
-import { partitionByDate } from '../lib/partitionByDate';
+import { partitionByDate, isTaskOverdue } from '../lib/partitionByDate';
+import { getTodayJST } from '../lib/filterTasks';
 import { formatRecurNotice } from '../lib/recurNotice';
 import TaskRow from '../components/TaskRow';
 import ProjectTreeRow from '../components/ProjectTreeRow';
@@ -59,8 +60,8 @@ function MobileTaskCard({
   onDetail: (t: Task) => void;
 }) {
   const [hidden, setHidden] = useState(false);
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-  const isOverdue = task.due != null && task.due < today;
+  const today = getTodayJST();
+  const isOverdue = isTaskOverdue(task, today);
 
   if (hidden) return null;
 
