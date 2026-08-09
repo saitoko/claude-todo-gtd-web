@@ -17,6 +17,8 @@ export interface PartitionedTasks {
  * #1674: partitionByDate() 内の overdue フィルタと、モバイルカード単体（MobileTaskCard）の
  * 期限超過表示判定が同じ式 `due != null && due < today` を別々に持っていた（重複）。
  * 本関数を唯一の判定ロジックとし、両方の呼び出し元から共通利用する。
+ * #1741: TaskRow / ProjectTreeRow（親行・子行）にも同型のインライン重複が残っていたため、
+ * 本関数への置き換えを全 UI コンポーネントに拡大した。
  *
  * @param task - 判定対象のタスク
  * @param today - 基準日（'YYYY-MM-DD'形式、JST）

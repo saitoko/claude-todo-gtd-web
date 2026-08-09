@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { type Task, MOVABLE_GTD_KEYS, GTD_DISPLAY, api } from '../lib/api';
 import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
+import { getTodayJST } from '../lib/filterTasks';
+import { isTaskOverdue } from '../lib/partitionByDate';
 
 interface Props {
   task: Task;
@@ -21,8 +23,8 @@ export default function TaskRow({ task, onDone, onMove, onDetail, onSaved }: Pro
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-  const isOverdue = task.due != null && task.due < today;
+  const today = getTodayJST();
+  const isOverdue = isTaskOverdue(task, today);
 
   async function handleSwipeDone() {
     reset();
