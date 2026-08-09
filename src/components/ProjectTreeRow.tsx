@@ -5,6 +5,8 @@ import { stripControlLines, buildFinalBody } from '../lib/taskBody';
 import ConfirmDialog, { type ConfirmDialogChoice } from './ConfirmDialog';
 import MoveDialog from './MoveDialog';
 import { useSwipeReveal } from '../hooks/useSwipeReveal';
+import { getTodayJST } from '../lib/filterTasks';
+import { isTaskOverdue } from '../lib/partitionByDate';
 
 interface Props {
   parent: Task;
@@ -30,8 +32,8 @@ export default function ProjectTreeRow({ parent, children, onDone, onMove, onRef
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-  const isOverdue = parent.due != null && parent.due < today;
+  const today = getTodayJST();
+  const isOverdue = isTaskOverdue(parent, today);
   const hasChildren = children.length > 0;
 
   async function handleSwipeDone() {
@@ -353,8 +355,8 @@ function ChildTaskRow({
 
   const { isOpen, handlers, reset, containerRef } = useSwipeReveal();
 
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-  const isOverdue = task.due != null && task.due < today;
+  const today = getTodayJST();
+  const isOverdue = isTaskOverdue(task, today);
 
   async function handleSwipeDone() {
     setBusy(true);
