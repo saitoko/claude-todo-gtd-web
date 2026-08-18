@@ -24,19 +24,31 @@ pwa は本リポジトリの単純な後継ではなく、**並行して開発�
 
 この違いにより、**CLI のロジックに依存する機能は web にしか実装されていません**。
 
-## pwa が持たない機能の参照実装（重要）
+## pwa が持たない機能（重要）
 
-以下は web で実装済みですが、pwa には存在しません。pwa へ移植する際の参照元として使ってください。
+以下は web では動いていましたが、pwa には存在しません。
 
-| 機能 | 実装箇所 | 元 Issue |
+| 機能 | 元 Issue |
+|---|---|
+| recur 再作成・depends_on 昇格 | #1669 |
+| 再作成結果のフロントエンド通知 | #1672 |
+| 完了 Undo | #1656 |
+| トースト通知 | #1656 |
+| 繰り返し再作成の通知UI | #1672 |
+
+**ただし、これらのロジックは本リポジトリにはありません。** web の `server/lib/github-issue-repository.js` の `done()` は `callEngineJson(tenant, ['done-issue', ...])` で CLI の `~/.claude/todo-engine.js` に spawn して丸投げする薄いラッパーです。web がこれらを実現できたのは「Express なので子プロセスを spawn できる」という環境優位によるもので、移植可能なロジック資産があるわけではありません。
+
+pwa へ移植する場合の参照元は **CLI 本体** です。
+
+| 対象 | 所在 | 規模 |
 |---|---|---|
-| recur 再作成・depends_on 昇格 | `server/lib/github-issue-repository.js:105-167` | #1669 |
-| 再作成結果のフロントエンド通知 | 同上（`recurCreated` をレスポンスに透過） | #1672 |
-| 完了 Undo | `server/routes/tasks.js` の undo-done エンドポイント | #1656 |
-| トースト通知 | `src/lib/useToast.ts` / `src/components/ToastStack.tsx` | #1656 |
-| 繰り返し再作成の通知UI | `src/lib/recurNotice.ts` | #1672 |
+| recur 日付計算 | `~/.claude/todo-engine.js:1009-1130` | 約120行 |
+| recur 再作成 | 同 `postDoneProcessing():3438-3473` | 約35行 |
+| depends_on 昇格 | 同 `:3485-3515` | 約30行 |
 
-特に **recur 再作成**は、pwa で routine タスクを完了しても次周期の Issue が作られない問題（本体リポジトリの Issue #1861）の解決に直接使えます。仕様とエッジケースの扱いは `server/lib/github-issue-repository*.test.js` のテストを参照してください。
+本リポジトリに価値があるのは、**UI 層の実装**（`src/lib/useToast.ts` / `src/components/ToastStack.tsx` / `src/lib/recurNotice.ts`）と、**API レスポンス設計**（`recurCreated: Array<{number, newIssueNumber}>` をどう透過させたか）です。
+
+関連課題は本体リポジトリの Issue #1861。
 
 ## ローカルブランチについて
 
